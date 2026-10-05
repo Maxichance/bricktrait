@@ -7,8 +7,8 @@ import {
 	HemisphereLight,
 	MathUtils,
 	Object3D,
-	PCFSoftShadowMap,
 	PerspectiveCamera,
+	VSMShadowMap,
 	PMREMGenerator,
 	Scene,
 	SRGBColorSpace,
@@ -49,7 +49,8 @@ export class Stage {
 		this.renderer.toneMapping = ACESFilmicToneMapping;
 		this.renderer.toneMappingExposure = 1;
 		this.renderer.shadowMap.enabled = true;
-		this.renderer.shadowMap.type = PCFSoftShadowMap;
+		// Blurred shadows: a cap brim or a hair fringe should not cut the face in two
+		this.renderer.shadowMap.type = VSMShadowMap;
 
 		const pmrem = new PMREMGenerator(this.renderer);
 		this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -61,8 +62,11 @@ export class Stage {
 		key.position.set(-230, 180, 115);
 		key.castShadow = true;
 		key.shadow.mapSize.set(1024, 1024);
-		key.shadow.bias = -0.002;
-		key.shadow.normalBias = 1.5;
+		key.shadow.radius = 7;
+		key.shadow.blurSamples = 16;
+		key.shadow.intensity = 0.6;
+		key.shadow.bias = -0.0005;
+		key.shadow.normalBias = 0.5;
 		Object.assign(key.shadow.camera, {
 			left: -60,
 			right: 60,
