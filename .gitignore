@@ -28,3 +28,6 @@ vite.config.ts.timestamp-*
 
 # Social preview card, uploaded by hand in the repo settings
 /social
+
+# Private roadmap
+/PLAN.md
