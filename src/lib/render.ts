@@ -20,8 +20,10 @@ class PortraitRenderer {
 		if (key === this.key) return true;
 		const version = ++this.version;
 		await library.init();
-		const torso = library.catalog.find((p) => p.id === figure.torso.id);
-		const model = await library.build(placements(figure, torso?.arms ?? false));
+		const find = (id: string) => library.catalog.find((p) => p.id === id);
+		const model = await library.build(
+			placements(figure, find(figure.torso.id), find(figure.head.id))
+		);
 		if (version !== this.version) return false;
 		this.stage ??= new Stage();
 		this.stage.setModel(model);

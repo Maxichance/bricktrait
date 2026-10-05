@@ -51,6 +51,42 @@ function resolve(ref) {
 	return hit;
 }
 
+// Vertical extent of a part (LDraw y points down)
+function heightOf(name) {
+	let top = Infinity;
+	let bottom = -Infinity;
+	(function walk(ref, m, t) {
+		const r = resolve(ref);
+		if (!r) return;
+		for (const line of read(r.key).split('\n')) {
+			const v = line.trim().split(/\s+/);
+			if (v[0] === '1' && v.length >= 15) {
+				const n = v.slice(2, 14).map(Number);
+				const at = [
+					m[0] * n[0] + m[1] * n[1] + m[2] * n[2] + t[0],
+					m[3] * n[0] + m[4] * n[1] + m[5] * n[2] + t[1],
+					m[6] * n[0] + m[7] * n[1] + m[8] * n[2] + t[2]
+				];
+				const r3 = n.slice(3);
+				const mm = [0, 1, 2].flatMap((i) =>
+					[0, 1, 2].map(
+						(j) => m[i * 3] * r3[j] + m[i * 3 + 1] * r3[3 + j] + m[i * 3 + 2] * r3[6 + j]
+					)
+				);
+				walk(v.slice(14).join(' '), mm, at);
+			} else if (v[0] === '3' || v[0] === '4') {
+				for (let i = 0; i < Number(v[0]); i++) {
+					const [x, y, z] = v.slice(2 + i * 3, 5 + i * 3).map(Number);
+					const Y = m[3] * x + m[4] * y + m[5] * z + t[1];
+					top = Math.min(top, Y);
+					bottom = Math.max(bottom, Y);
+				}
+			}
+		}
+	})(name, [1, 0, 0, 0, 1, 0, 0, 0, 1], [0, 0, 0]);
+	return { top, bottom };
+}
+
 function refsOf(text) {
 	const refs = [];
 	for (const line of text.split('\n')) {
@@ -149,6 +185,13 @@ for (const p of parts) {
 	fs.writeFileSync(path.join(OUT, 'p', `${id}.ldr`), text);
 	const entry = { id, name: p.desc.replace(/^Minifig /, ''), cat: p.cat };
 	if (p.cat === 'headgear') entry.kind = p.desc.split(' ')[1];
+	if (p.cat === 'head') {
+		// Standard heads have their origin on top (stud base) and go down to y=24.
+		// Moulded heads (Sonic, E.T., animals...) have it at the neck instead:
+		// they are placed on the torso as is, and headgear sits on their top.
+		const { top, bottom } = heightOf(p.file);
+		if (bottom <= 10) entry.neck = Math.round(top);
+	}
 	if (p.cat === 'torso') {
 		// Torsos that already come with arms (wings, dual mould, ...)
 		entry.arms = [...p.deps.keys()].some(

@@ -78,6 +78,14 @@
 		setTimeout(() => (copied = false), 1800);
 	}
 
+	// Moulded heads (Sonic, E.T...) are complete, headgear is dropped; it can be added back
+	function pickHead(id: string | null) {
+		if (!id) return;
+		const part = catalog.find((p) => p.id === id);
+		if (part?.neck !== undefined) portrait.figure.headgear.id = null;
+		portrait.figure.head.id = id;
+	}
+
 	function reset() {
 		Object.assign(portrait, structuredClone(initial));
 	}
@@ -149,12 +157,7 @@
 					colors={library.colors}
 					onchange={(c) => (f.color = c)}
 				/>
-				<PartPicker
-					parts={heads}
-					selected={f.id}
-					color={f.color}
-					onpick={(id) => id && (f.id = id)}
-				/>
+				<PartPicker parts={heads} selected={f.id} color={f.color} onpick={pickHead} />
 			{:else if tab === 'headgear'}
 				{@const f = portrait.figure.headgear}
 				<Swatches

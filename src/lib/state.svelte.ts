@@ -62,12 +62,13 @@ export function randomize(catalog: Part[]) {
 	const of = (cat: string) => catalog.filter((p) => p.cat === cat);
 	const skin = [14, 14, 14, 78, 84, 92, 70];
 	const torso = pick(of('torso'));
-	const wear = Math.random() < 0.9 ? pick(of('headgear')) : null;
 	// Printed heads have faces, plain ones would look empty
-	const heads = of('head').filter((p) => /pattern/i.test(p.name));
+	const head = pick(of('head').filter((p) => /pattern/i.test(p.name)));
+	// Moulded heads are complete on their own
+	const wear = head.neck === undefined && Math.random() < 0.9 ? pick(of('headgear')) : null;
 	const colors = COMMON_COLORS.slice(6, 30);
 	portrait.figure = {
-		head: { id: pick(heads).id, color: pick(skin) },
+		head: { id: head.id, color: pick(skin) },
 		headgear: { id: wear?.id ?? null, color: pick(colors) },
 		torso: { id: torso.id, color: pick(colors), arms: pick(colors), hands: pick(skin) },
 		legs:
