@@ -1,15 +1,23 @@
+@import '@fontsource-variable/archivo';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+/* Instruction booklet look: paper, ink, brick colours */
 :root {
-	color-scheme: dark;
-	--bg: #0a0b14;
-	--panel: #12141f;
-	--panel-2: #1a1d2b;
-	--line: #262a3b;
-	--text: #e9ebf5;
-	--muted: #8b90a8;
-	--accent: #3d6bff;
-	--accent-2: #ffcf1f;
-	--radius: 12px;
-	--font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	color-scheme: light;
+	--paper: #f3efe4;
+	--card: #fffdf6;
+	--sunk: #e9e4d6;
+	--ink: #1d1b17;
+	--ink-2: #4b473e;
+	--muted: #898375;
+	--line: #d8d1bf;
+	--yellow: #ffc815;
+	--red: #d6232c;
+	--blue: #1f5ef5;
+	--radius: 6px;
+	--font: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+	--mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 * {
@@ -19,11 +27,12 @@
 html,
 body {
 	margin: 0;
-	background: var(--bg);
-	color: var(--text);
+	background: var(--paper);
+	color: var(--ink);
 	font-family: var(--font);
 	font-size: 15px;
 	line-height: 1.45;
+	-webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -38,12 +47,78 @@ button {
 }
 
 a {
-	color: var(--accent);
+	color: inherit;
+	text-underline-offset: 3px;
 }
 
 :focus-visible {
-	outline: 2px solid var(--accent-2);
+	outline: 2px solid var(--blue);
 	outline-offset: 2px;
+}
+
+/* Buttons: flat paper, or yellow brick with a hard shadow */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 38px;
+	padding: 0 14px;
+	border: 1.5px solid var(--ink);
+	border-radius: var(--radius);
+	background: var(--card);
+	font-weight: 600;
+	white-space: nowrap;
+	transition:
+		transform 0.08s,
+		box-shadow 0.08s;
+}
+.btn:hover:not(:disabled) {
+	background: #fff;
+}
+.btn.primary {
+	background: var(--yellow);
+	box-shadow: 3px 3px 0 var(--ink);
+}
+.btn.primary:active:not(:disabled) {
+	transform: translate(2px, 2px);
+	box-shadow: 1px 1px 0 var(--ink);
+}
+.btn.quiet {
+	border-color: transparent;
+	background: none;
+	color: var(--ink-2);
+}
+.btn.quiet:hover:not(:disabled) {
+	background: var(--sunk);
+}
+.btn:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.mono {
+	font-family: var(--mono);
+	font-size: 0.82em;
+	letter-spacing: -0.01em;
+}
+
+.label {
+	font-size: 0.72rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--muted);
+}
+
+kbd {
+	font-family: var(--mono);
+	font-size: 0.75rem;
+	padding: 1px 5px;
+	border: 1px solid var(--line);
+	border-bottom-width: 2px;
+	border-radius: 4px;
+	background: var(--card);
+	color: var(--ink-2);
 }
 
 .sr-only {

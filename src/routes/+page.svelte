@@ -1,43 +1,49 @@
 <script lang="ts">
 	import { asset } from '$app/paths';
-	import { library, STANDARD_LEGS, type Part } from '#lib/ldraw.ts';
+	import { library, STANDARD_LEGS, type Color, type Part } from '#lib/ldraw.ts';
 	import { MIN_ZOOM } from '#lib/scene.ts';
 	import { renderer } from '#lib/render.ts';
 	import { fromHash, initial, portrait, randomize, toHash } from '#lib/state.svelte.ts';
+	import { history as timeline, redo, track, undo } from '#lib/history.svelte.ts';
 	import Preview from '#lib/components/Preview.svelte';
 	import PartPicker from '#lib/components/PartPicker.svelte';
+	import Slot from '#lib/components/Slot.svelte';
 	import Swatches from '#lib/components/Swatches.svelte';
 
-	type Tab = 'head' | 'headgear' | 'torso' | 'legs' | 'style';
-	const TABS: { id: Tab; label: string }[] = [
-		{ id: 'head', label: 'Head' },
-		{ id: 'headgear', label: 'Headgear' },
-		{ id: 'torso', label: 'Torso' },
-		{ id: 'legs', label: 'Legs' },
-		{ id: 'style', label: 'Style' }
+	type SlotId = 'headgear' | 'head' | 'torso' | 'legs';
+	// Top to bottom, like the figure
+	const SLOTS: { id: SlotId; label: string; key: string }[] = [
+		{ id: 'headgear', label: 'Headgear', key: '1' },
+		{ id: 'head', label: 'Head', key: '2' },
+		{ id: 'torso', label: 'Torso', key: '3' },
+		{ id: 'legs', label: 'Legs', key: '4' }
 	];
 	const BACKGROUNDS = [
 		{ id: 'space', label: 'Space' },
 		{ id: 'solid', label: 'Solid' },
 		{ id: 'none', label: 'Transparent' }
 	] as const;
+	const STANDARD: Part = { id: STANDARD_LEGS, name: 'Standard hips and legs', cat: 'legs' };
 
-	let tab: Tab = $state('head');
+	let active: SlotId = $state('head');
 	let catalog: Part[] = $state([]);
+	let colors: Color[] = $state([]);
 	let ready = $state(false);
 	let failed = $state('');
 	let size = $state(512);
 	let copied = $state(false);
 
 	const of = (cat: string) => catalog.filter((p) => p.cat === cat);
-	const heads = $derived(of('head'));
-	const headgear = $derived(of('headgear'));
-	const torsos = $derived(of('torso'));
-	const legs = $derived<Part[]>([
-		{ id: STANDARD_LEGS, name: 'Standard hips and legs', cat: 'legs' },
-		...of('legs')
-	]);
-	const torso = $derived(catalog.find((p) => p.id === portrait.figure.torso.id));
+	const lists = $derived<Record<SlotId, Part[]>>({
+		headgear: of('headgear'),
+		head: of('head'),
+		torso: of('torso'),
+		legs: [STANDARD, ...of('legs')]
+	});
+	const find = (id: string | null) =>
+		id === STANDARD_LEGS ? STANDARD : catalog.find((p) => p.id === id);
+	const colorOf = (code: number) => colors.find((c) => c.code === code);
+	const torso = $derived(find(portrait.figure.torso.id));
 
 	$effect(() => {
 		const shared = fromHash(location.hash);
@@ -46,17 +52,53 @@
 			.init()
 			.then(() => {
 				catalog = library.catalog;
+				colors = library.colors;
 				ready = true;
 			})
 			.catch((e: Error) => (failed = e.message));
 	});
 
-	// Keep the address bar shareable
+	// Keep the address bar shareable, and the undo history up to date
 	$effect(() => {
-		const hash = toHash($state.snapshot(portrait));
-		const t = setTimeout(() => history.replaceState(history.state, '', `#${hash}`), 300);
+		const snapshot = $state.snapshot(portrait);
+		track(snapshot);
+		const t = setTimeout(
+			() => history.replaceState(history.state, '', `#${toHash(snapshot)}`),
+			300
+		);
 		return () => clearTimeout(t);
 	});
+
+	function pick(slot: SlotId, id: string) {
+		// Moulded heads (Sonic, E.T...) are complete: headgear is dropped, it can be added back
+		if (slot === 'head' && find(id)?.neck !== undefined) portrait.figure.headgear.id = null;
+		portrait.figure[slot].id = id;
+	}
+
+	function remove(slot: SlotId) {
+		portrait.figure[slot].id = null;
+	}
+
+	function keydown(e: KeyboardEvent) {
+		const el = e.target as HTMLElement;
+		const typing = el.matches('input[type=search], input[type=text], textarea, select');
+		const mod = e.ctrlKey || e.metaKey;
+		const key = e.key.toLowerCase();
+		if (mod && key === 'z' && !typing) {
+			e.preventDefault();
+			if (e.shiftKey) redo();
+			else undo();
+		} else if (mod && key === 'y' && !typing) {
+			e.preventDefault();
+			redo();
+		} else if (!mod && !typing && (e.key === 'Delete' || e.key === 'Backspace')) {
+			e.preventDefault();
+			remove(active);
+		} else if (!mod && !typing && !e.altKey) {
+			const slot = SLOTS.find((s) => s.key === e.key);
+			if (slot) active = slot.id;
+		}
+	}
 
 	async function download() {
 		const blob = await renderer.png(
@@ -78,18 +120,12 @@
 		setTimeout(() => (copied = false), 1800);
 	}
 
-	// Moulded heads (Sonic, E.T...) are complete, headgear is dropped; it can be added back
-	function pickHead(id: string | null) {
-		if (!id) return;
-		const part = catalog.find((p) => p.id === id);
-		if (part?.neck !== undefined) portrait.figure.headgear.id = null;
-		portrait.figure.head.id = id;
-	}
-
-	function reset() {
+	function startOver() {
 		Object.assign(portrait, structuredClone(initial));
 	}
 </script>
+
+<svelte:window onkeydown={keydown} />
 
 <svelte:head>
 	<title>bricktrait · minifig portrait maker</title>
@@ -100,192 +136,197 @@
 </svelte:head>
 
 <header>
-	<a class="logo" href="./" aria-label="bricktrait home">
-		<span class="stud" aria-hidden="true"></span>bricktrait
+	<a class="logo" href="./">
+		<svg class="brick" viewBox="0 0 40 28" aria-hidden="true">
+			<rect x="1" y="9" width="38" height="18" rx="2" />
+			<rect x="6" y="3" width="10" height="7" rx="1.5" />
+			<rect x="24" y="3" width="10" height="7" rx="1.5" />
+		</svg>
+		<span class="word">bricktrait</span>
 	</a>
-	<a class="gh" href="https://github.com/Maxichance/bricktrait">GitHub</a>
+	<p class="tagline">Minifig portraits from real parts</p>
+	<nav class="tools" aria-label="History">
+		<button
+			type="button"
+			class="btn quiet"
+			onclick={undo}
+			disabled={!timeline.canUndo}
+			title="Undo (Ctrl+Z)"
+		>
+			<svg viewBox="0 0 20 20" aria-hidden="true"
+				><path d="M7 5 3 9l4 4M3.5 9H12a5 5 0 0 1 0 10h-2" /></svg
+			>
+			<span>Undo</span>
+		</button>
+		<button
+			type="button"
+			class="btn quiet"
+			onclick={redo}
+			disabled={!timeline.canRedo}
+			title="Redo (Ctrl+Shift+Z)"
+		>
+			<svg viewBox="0 0 20 20" aria-hidden="true"
+				><path d="m13 5 4 4-4 4m3.5-4H8a5 5 0 0 0 0 10h2" /></svg
+			>
+			<span>Redo</span>
+		</button>
+		<a class="btn quiet" href="https://github.com/Maxichance/bricktrait">GitHub</a>
+	</nav>
 </header>
 
 <main>
 	<section class="stage" aria-label="Portrait">
 		<Preview />
+
 		<div class="actions">
-			<button type="button" class="primary" onclick={download} disabled={!ready}>
+			<button type="button" class="btn primary" onclick={download} disabled={!ready}>
 				Download PNG
 			</button>
 			<label>
-				<span class="sr-only">Size</span>
-				<select bind:value={size}>
+				<span class="sr-only">Image size</span>
+				<select class="btn" bind:value={size}>
 					<option value={256}>256 px</option>
 					<option value={512}>512 px</option>
 					<option value={1024}>1024 px</option>
 				</select>
 			</label>
-			<button type="button" onclick={() => randomize(catalog)} disabled={!ready}>Random</button>
-			<button type="button" onclick={share}>{copied ? 'Link copied' : 'Share link'}</button>
-			<button type="button" class="ghost" onclick={reset}>Reset</button>
+			<span class="spacer"></span>
+			<button type="button" class="btn" onclick={() => randomize(catalog)} disabled={!ready}>
+				Random
+			</button>
+			<button type="button" class="btn" onclick={share}>{copied ? 'Copied' : 'Share'}</button>
 		</div>
-		<p class="hint">Drag to turn, scroll to zoom, double click to reset the view.</p>
+
+		<div class="scene">
+			<h2 class="label">Camera</h2>
+			{#each [{ k: 'yaw', label: 'Turn', min: -70, max: 70, step: 1, unit: '°' }, { k: 'pitch', label: 'Tilt', min: -25, max: 35, step: 1, unit: '°' }, { k: 'zoom', label: 'Zoom', min: MIN_ZOOM, max: 2, step: 0.01, unit: '×' }] as const as r (r.k)}
+				<label class="range">
+					<span>{r.label}</span>
+					<input
+						type="range"
+						min={r.min}
+						max={r.max}
+						step={r.step}
+						bind:value={portrait.view[r.k]}
+					/>
+					<span class="mono val"
+						>{r.k === 'zoom'
+							? portrait.view.zoom.toFixed(2)
+							: Math.round(portrait.view[r.k])}{r.unit}</span
+					>
+				</label>
+			{/each}
+
+			<h2 class="label">Scene</h2>
+			<div class="seg" role="group" aria-label="Background">
+				{#each BACKGROUNDS as b (b.id)}
+					<button
+						type="button"
+						aria-pressed={portrait.style.background === b.id}
+						onclick={() => (portrait.style.background = b.id)}>{b.label}</button
+					>
+				{/each}
+			</div>
+			<div class="row">
+				{#if portrait.style.background !== 'none'}
+					<label class="color">
+						<input type="color" bind:value={portrait.style.backdrop} />
+						<span>{portrait.style.background === 'space' ? 'Disc' : 'Fill'}</span>
+					</label>
+				{/if}
+				<label class="color" class:off={!portrait.style.ring}>
+					<input
+						type="color"
+						bind:value={portrait.style.ringColor}
+						disabled={!portrait.style.ring}
+					/>
+					<span>Ring</span>
+				</label>
+				<label class="check">
+					<input type="checkbox" bind:checked={portrait.style.ring} />
+					<span>Show ring</span>
+				</label>
+				<label class="check">
+					<input type="checkbox" bind:checked={portrait.style.retro} />
+					<span>Retro blur</span>
+				</label>
+			</div>
+		</div>
 	</section>
 
-	<section class="panel" aria-label="Editor">
-		<div class="tabs" role="tablist">
-			{#each TABS as t (t.id)}
-				<button
-					type="button"
-					role="tab"
-					id="tab-{t.id}"
-					aria-selected={tab === t.id}
-					aria-controls="panel"
-					onclick={() => (tab = t.id)}
-				>
-					{t.label}
-				</button>
+	<section class="editor" aria-label="Figure">
+		<div class="slots">
+			{#each SLOTS as s (s.id)}
+				{@const f = portrait.figure[s.id]}
+				<Slot
+					label={s.label}
+					id={f.id}
+					name={find(f.id)?.name ?? f.id ?? ''}
+					color={colorOf(f.color)}
+					active={active === s.id}
+					onselect={() => (active = s.id)}
+					onremove={() => remove(s.id)}
+				/>
 			{/each}
 		</div>
 
-		<div class="body" role="tabpanel" id="panel" aria-labelledby="tab-{tab}">
+		<div class="panel">
 			{#if failed}
 				<p class="error" role="alert">Could not load the parts: {failed}</p>
 			{:else if !ready}
-				<p class="muted">Loading parts…</p>
-			{:else if tab === 'head'}
-				{@const f = portrait.figure.head}
-				<Swatches
-					label="Skin"
-					value={f.color}
-					colors={library.colors}
-					onchange={(c) => (f.color = c)}
-				/>
-				<PartPicker parts={heads} selected={f.id} color={f.color} onpick={pickHead} />
-			{:else if tab === 'headgear'}
-				{@const f = portrait.figure.headgear}
-				<Swatches
-					label="Colour"
-					value={f.color}
-					colors={library.colors}
-					onchange={(c) => (f.color = c)}
-				/>
-				<PartPicker
-					parts={headgear}
-					selected={f.id}
-					color={f.color}
-					none
-					onpick={(id) => (f.id = id)}
-				/>
-			{:else if tab === 'torso'}
-				{@const f = portrait.figure.torso}
-				<Swatches
-					label="Torso"
-					value={f.color}
-					colors={library.colors}
-					onchange={(c) => (f.color = c)}
-				/>
-				{#if !torso?.arms}
-					<Swatches
-						label="Arms"
-						value={f.arms}
-						colors={library.colors}
-						onchange={(c) => (f.arms = c)}
-					/>
-					<Swatches
-						label="Hands"
-						value={f.hands}
-						colors={library.colors}
-						onchange={(c) => (f.hands = c)}
-					/>
-				{/if}
-				<PartPicker
-					parts={torsos}
-					selected={f.id}
-					color={f.color}
-					onpick={(id) => id && (f.id = id)}
-				/>
-			{:else if tab === 'legs'}
-				{@const f = portrait.figure.legs}
-				{#if f.id === STANDARD_LEGS}
-					<Swatches
-						label="Hips"
-						value={f.hips}
-						colors={library.colors}
-						onchange={(c) => (f.hips = c)}
-					/>
-				{/if}
-				<Swatches
-					label="Legs"
-					value={f.color}
-					colors={library.colors}
-					onchange={(c) => (f.color = c)}
-				/>
-				<p class="muted">Legs show up when you zoom out.</p>
-				<PartPicker
-					parts={legs}
-					selected={f.id}
-					color={f.color}
-					none
-					onpick={(id) => (f.id = id)}
-				/>
+				<p class="muted">Loading the parts library…</p>
 			{:else}
-				{@const s = portrait.style}
-				{@const v = portrait.view}
-				<div class="style">
-					<fieldset>
-						<legend>Background</legend>
-						<div class="seg">
-							{#each BACKGROUNDS as b (b.id)}
-								<button
-									type="button"
-									aria-pressed={s.background === b.id}
-									onclick={() => (s.background = b.id)}
-								>
-									{b.label}
-								</button>
-							{/each}
-						</div>
-					</fieldset>
-					{#if s.background !== 'none'}
-						<label class="row">
-							<span>{s.background === 'space' ? 'Disc colour' : 'Colour'}</span>
-							<input type="color" bind:value={s.backdrop} />
-						</label>
+				{@const f = portrait.figure[active]}
+				<div class="colors">
+					{#if active === 'torso'}
+						{@const t = portrait.figure.torso}
+						<Swatches label="Torso" value={t.color} {colors} onchange={(c) => (t.color = c)} />
+						{#if !torso?.arms}
+							<Swatches label="Arms" value={t.arms} {colors} onchange={(c) => (t.arms = c)} />
+							<Swatches label="Hands" value={t.hands} {colors} onchange={(c) => (t.hands = c)} />
+						{/if}
+					{:else if active === 'legs'}
+						{@const l = portrait.figure.legs}
+						{#if l.id === STANDARD_LEGS}
+							<Swatches label="Hips" value={l.hips} {colors} onchange={(c) => (l.hips = c)} />
+						{/if}
+						<Swatches label="Legs" value={l.color} {colors} onchange={(c) => (l.color = c)} />
+					{:else}
+						<Swatches
+							label={active === 'head' ? 'Skin' : 'Colour'}
+							value={f.color}
+							{colors}
+							onchange={(c) => (f.color = c)}
+						/>
 					{/if}
-					<label class="row">
-						<span>Ring</span>
-						<input type="checkbox" bind:checked={s.ring} />
-					</label>
-					{#if s.ring}
-						<label class="row">
-							<span>Ring colour</span>
-							<input type="color" bind:value={s.ringColor} />
-						</label>
-					{/if}
-					<label class="row">
-						<span>Retro look <small>soft, low resolution render</small></span>
-						<input type="checkbox" bind:checked={s.retro} />
-					</label>
-					<label class="row">
-						<span>Turn <small>{Math.round(v.yaw)}°</small></span>
-						<input type="range" min="-70" max="70" bind:value={v.yaw} />
-					</label>
-					<label class="row">
-						<span>Tilt <small>{Math.round(v.pitch)}°</small></span>
-						<input type="range" min="-25" max="35" bind:value={v.pitch} />
-					</label>
-					<label class="row">
-						<span>Zoom <small>{v.zoom.toFixed(2)}×</small></span>
-						<input type="range" min={MIN_ZOOM} max="2" step="0.01" bind:value={v.zoom} />
-					</label>
 				</div>
+				{#if active === 'legs'}
+					<p class="hint">Legs show when you zoom out.</p>
+				{/if}
+				{#key active}
+					<PartPicker
+						parts={lists[active]}
+						selected={f.id}
+						color={f.color}
+						onpick={(id) => pick(active, id)}
+					/>
+				{/key}
 			{/if}
 		</div>
+
+		<p class="keys">
+			<kbd>1</kbd>–<kbd>4</kbd> slots · <kbd>Del</kbd> remove · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo ·
+			drag the portrait to turn it
+			<button type="button" class="link" onclick={startOver}>Start over</button>
+		</p>
 	</section>
 </main>
 
 <footer>
 	<p>
-		Parts from the <a href="https://www.ldraw.org">LDraw</a> Parts Library by its contributors,
-		licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY</a>
-		(<a href={asset('ldraw/CREDITS.txt')}>full credits</a>).
+		Parts from the <a href="https://www.ldraw.org">LDraw</a> library by its contributors,
+		<a href="https://creativecommons.org/licenses/by/4.0/">CC BY</a> ·
+		<a href={asset('ldraw/CREDITS.txt')}>credits</a>
 	</p>
 	<p>
 		LEGO® is a trademark of the LEGO Group, which does not sponsor, authorize or endorse this site.
@@ -296,44 +337,64 @@
 	header,
 	main,
 	footer {
-		max-width: 1180px;
+		max-width: 1240px;
 		margin: 0 auto;
-		padding: 0 16px;
+		padding: 0 20px;
 	}
 	header {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		height: 64px;
+		gap: 16px;
+		height: 68px;
+		border-bottom: 1.5px solid var(--ink);
+		margin-bottom: 20px;
 	}
 	.logo {
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		color: var(--text);
 		text-decoration: none;
+	}
+	.brick {
+		width: 34px;
+		fill: var(--red);
+		stroke: var(--ink);
+		stroke-width: 1.5;
+	}
+	.word {
 		font-weight: 800;
-		font-size: 1.25rem;
-		letter-spacing: -0.02em;
+		font-size: 1.4rem;
+		letter-spacing: -0.03em;
 	}
-	.stud {
-		width: 22px;
-		height: 22px;
-		border-radius: 6px;
-		background:
-			radial-gradient(circle, #ffe36b 0 34%, #d9a400 35% 42%, transparent 43%), var(--accent-2);
+	.tagline {
+		margin: 0;
+		padding-left: 16px;
+		border-left: 1.5px solid var(--line);
+		color: var(--ink-2);
+		font-size: 0.9rem;
 	}
-	.gh {
-		color: var(--muted);
+	.tools {
+		display: flex;
+		gap: 2px;
+		margin-left: auto;
+	}
+	.tools svg {
+		width: 16px;
+		height: 16px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+	.tools a {
 		text-decoration: none;
 	}
-	.gh:hover {
-		color: var(--text);
-	}
+
 	main {
 		display: grid;
-		grid-template-columns: minmax(0, 460px) minmax(0, 1fr);
-		gap: 24px;
+		grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+		gap: 28px;
 		align-items: start;
 	}
 	.stage {
@@ -344,128 +405,162 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
-		margin-top: 12px;
+		margin-top: 14px;
 	}
-	.actions button,
-	.actions select {
-		background: var(--panel-2);
-		border: 1px solid var(--line);
-		border-radius: 8px;
-		padding: 8px 14px;
+	.spacer {
+		flex: 1;
 	}
-	.actions .primary {
-		background: var(--accent-2);
-		border-color: var(--accent-2);
-		color: #1a1500;
-		font-weight: 700;
+	select.btn {
+		padding-right: 8px;
 	}
-	.actions .ghost {
+
+	.scene {
+		margin-top: 18px;
+		padding-top: 14px;
+		border-top: 1.5px dashed var(--line);
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.scene h2 {
+		margin: 6px 0 0;
+	}
+	.range {
+		display: grid;
+		grid-template-columns: 44px 1fr 52px;
+		align-items: center;
+		gap: 10px;
+		font-size: 0.9rem;
+	}
+	.range input {
+		accent-color: var(--ink);
+	}
+	.val {
+		text-align: right;
+		color: var(--ink-2);
+	}
+	.seg {
+		display: flex;
+		border: 1.5px solid var(--ink);
+		border-radius: var(--radius);
+		overflow: hidden;
+	}
+	.seg button {
+		flex: 1;
+		height: 34px;
+		border: 0;
+		background: var(--card);
+		font-weight: 600;
+		font-size: 0.88rem;
+	}
+	.seg button + button {
+		border-left: 1.5px solid var(--ink);
+	}
+	.seg button[aria-pressed='true'] {
+		background: var(--ink);
+		color: var(--paper);
+	}
+	.row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 16px;
+		font-size: 0.9rem;
+	}
+	.color,
+	.check {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		cursor: pointer;
+	}
+	.color.off {
+		opacity: 0.4;
+	}
+	input[type='color'] {
+		width: 28px;
+		height: 28px;
+		padding: 0;
+		border: 1.5px solid var(--ink);
+		border-radius: 4px;
 		background: none;
-		color: var(--muted);
+		cursor: pointer;
 	}
-	button:disabled {
-		opacity: 0.5;
-		cursor: default;
+	input[type='color']::-webkit-color-swatch-wrapper {
+		padding: 2px;
+	}
+	input[type='color']::-webkit-color-swatch {
+		border: 0;
+		border-radius: 2px;
+	}
+	.check input {
+		accent-color: var(--ink);
+		width: 16px;
+		height: 16px;
+	}
+
+	.slots {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 10px;
+	}
+	.panel {
+		margin-top: 14px;
+		padding: 16px;
+		background: var(--sunk);
+		border-radius: var(--radius);
+		min-height: 60vh;
+	}
+	.colors {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		margin-bottom: 16px;
 	}
 	.hint,
 	.muted {
 		color: var(--muted);
 		font-size: 0.85rem;
-	}
-	.panel {
-		background: var(--panel);
-		border: 1px solid var(--line);
-		border-radius: var(--radius);
-		min-height: 60vh;
-	}
-	.tabs {
-		display: flex;
-		border-bottom: 1px solid var(--line);
-		padding: 0 8px;
-		overflow-x: auto;
-	}
-	.tabs button {
-		background: none;
-		border: 0;
-		border-bottom: 2px solid transparent;
-		padding: 14px 14px 12px;
-		color: var(--muted);
-		font-weight: 600;
-	}
-	.tabs button[aria-selected='true'] {
-		color: var(--text);
-		border-bottom-color: var(--accent-2);
-	}
-	.body {
-		padding: 16px;
-		display: flex;
-		flex-direction: column;
-		gap: 14px;
-	}
-	.style {
-		display: flex;
-		flex-direction: column;
-		gap: 14px;
-		max-width: 420px;
-	}
-	fieldset {
-		border: 0;
-		margin: 0;
-		padding: 0;
-	}
-	legend {
-		color: var(--muted);
-		font-size: 0.8rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		margin-bottom: 6px;
-	}
-	.seg {
-		display: flex;
-		gap: 6px;
-	}
-	.seg button {
-		flex: 1;
-		background: var(--panel-2);
-		border: 1px solid var(--line);
-		border-radius: 8px;
-		padding: 6px 10px;
-	}
-	.seg button[aria-pressed='true'] {
-		border-color: var(--accent-2);
-	}
-	.row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-	}
-	.row small {
-		color: var(--muted);
-		margin-left: 6px;
-	}
-	.row input[type='range'] {
-		width: 55%;
-	}
-	input[type='color'] {
-		width: 44px;
-		height: 30px;
-		border: 1px solid var(--line);
-		border-radius: 6px;
-		background: none;
-		padding: 2px;
+		margin: -6px 0 12px;
 	}
 	.error {
-		color: #ffb3c4;
+		color: var(--red);
 	}
+	.keys {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px;
+		color: var(--muted);
+		font-size: 0.8rem;
+	}
+	.link {
+		margin-left: auto;
+		border: 0;
+		background: none;
+		padding: 0;
+		color: var(--ink-2);
+		font-weight: 600;
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
 	footer {
-		margin-top: 40px;
+		margin-top: 48px;
+		padding-top: 16px;
 		padding-bottom: 32px;
+		border-top: 1.5px solid var(--line);
 		color: var(--muted);
 		font-size: 0.8rem;
 	}
 	footer p {
 		margin: 4px 0;
+	}
+
+	@media (max-width: 1080px) {
+		.slots {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
 	}
 	@media (max-width: 820px) {
 		main {
@@ -476,6 +571,10 @@
 			max-width: 520px;
 			width: 100%;
 			margin: 0 auto;
+		}
+		.tagline,
+		.tools span {
+			display: none;
 		}
 	}
 </style>

@@ -123,21 +123,24 @@ const LEGS = [0, 44, 0] as [number, number, number];
 /** Legs id for plain hips and legs with their own colours */
 export const STANDARD_LEGS = 'standard';
 
+/** Every slot can be emptied: `id: null` */
 export interface Figure {
-	head: { id: string; color: number };
+	head: { id: string | null; color: number };
 	headgear: { id: string | null; color: number };
-	torso: { id: string; color: number; arms: number; hands: number };
+	/** arms and hands are added when the torso has none of its own */
+	torso: { id: string | null; color: number; arms: number; hands: number };
 	/** `color` is the legs colour, `hips` only applies to STANDARD_LEGS */
 	legs: { id: string | null; color: number; hips: number };
 }
 
 export function placements(fig: Figure, torso?: Part, head?: Part): Placement[] {
+	const list: Placement[] = [];
 	// Moulded heads sit on the torso as is, headgear goes on their top
 	const moulded = head?.neck !== undefined;
-	const list: Placement[] = [
-		{ id: fig.torso.id, color: fig.torso.color },
-		{ id: fig.head.id, color: fig.head.color, at: moulded ? [0, 0, 0] : [...HEAD] }
-	];
+	if (fig.torso.id) list.push({ id: fig.torso.id, color: fig.torso.color });
+	if (fig.head.id) {
+		list.push({ id: fig.head.id, color: fig.head.color, at: moulded ? [0, 0, 0] : [...HEAD] });
+	}
 	if (fig.headgear.id) {
 		const at: [number, number, number] = moulded ? [0, head!.neck!, 0] : [...HEAD];
 		list.push({ id: fig.headgear.id, color: fig.headgear.color, at });
@@ -147,7 +150,7 @@ export function placements(fig: Figure, torso?: Part, head?: Part): Placement[] 
 	} else if (fig.legs.id) {
 		list.push({ id: fig.legs.id, color: fig.legs.color, at: HIPS });
 	}
-	if (!torso?.arms) {
+	if (fig.torso.id && !torso?.arms) {
 		list.push(
 			{ id: '3818', color: fig.torso.arms, ...copy(ARM_RIGHT) },
 			{ id: '3819', color: fig.torso.arms, ...copy(ARM_LEFT) },

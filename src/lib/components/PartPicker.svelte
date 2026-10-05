@@ -6,16 +6,13 @@
 		parts,
 		selected,
 		color,
-		none = false,
 		onpick
 	}: {
 		parts: Part[];
 		selected: string | null;
 		/** colour used for the thumbnails */
 		color: number;
-		/** offers a "nothing" choice */
-		none?: boolean;
-		onpick: (id: string | null) => void;
+		onpick: (id: string) => void;
 	} = $props();
 
 	const PAGE = 90;
@@ -53,31 +50,24 @@
 <div class="picker">
 	<div class="filters">
 		<label class="search">
-			<span class="sr-only">Search</span>
-			<input type="search" placeholder="Search {parts.length} parts…" bind:value={query} />
+			<span class="sr-only">Search parts</span>
+			<svg viewBox="0 0 20 20" aria-hidden="true"
+				><circle cx="8.5" cy="8.5" r="5.5" /><path d="m13 13 4 4" /></svg
+			>
+			<input type="search" placeholder="Name or part number" bind:value={query} />
 		</label>
-		{#if kinds.length > 1}
-			<div class="kinds" role="group" aria-label="Type">
-				<button type="button" aria-pressed={!kind} onclick={() => (kind = '')}>All</button>
-				{#each kinds as k (k)}
-					<button type="button" aria-pressed={kind === k} onclick={() => (kind = k)}>{k}</button>
-				{/each}
-			</div>
-		{/if}
+		<span class="count mono">{filtered.length} / {parts.length}</span>
 	</div>
+	{#if kinds.length > 1}
+		<div class="kinds" role="group" aria-label="Type">
+			<button type="button" aria-pressed={!kind} onclick={() => (kind = '')}>All</button>
+			{#each kinds as k (k)}
+				<button type="button" aria-pressed={kind === k} onclick={() => (kind = k)}>{k}</button>
+			{/each}
+		</div>
+	{/if}
 
 	<div class="grid">
-		{#if none && !query && !kind}
-			<button
-				type="button"
-				class="item none"
-				aria-pressed={selected === null}
-				title="Nothing"
-				onclick={() => onpick(null)}
-			>
-				<span class="empty">None</span>
-			</button>
-		{/if}
 		{#each filtered.slice(0, limit) as p (p.id)}
 			<button
 				type="button"
@@ -87,6 +77,7 @@
 				onclick={() => onpick(p.id)}
 			>
 				<Thumb id={p.id} {color} />
+				<span class="id mono">{p.id}</span>
 				<span class="sr-only">{p.name}</span>
 			</button>
 		{/each}
@@ -94,69 +85,103 @@
 	{#if filtered.length > limit}
 		<div bind:this={sentinel} class="sentinel"></div>
 	{:else if !filtered.length}
-		<p class="nothing">No part matches “{query}”.</p>
+		<p class="nothing">Nothing matches “{query}”.</p>
 	{/if}
 </div>
 
 <style>
 	.filters {
 		display: flex;
-		flex-direction: column;
-		gap: 8px;
+		align-items: center;
+		gap: 12px;
 		margin-bottom: 10px;
+	}
+	.search {
+		position: relative;
+		flex: 1;
+	}
+	.search svg {
+		position: absolute;
+		left: 11px;
+		top: 50%;
+		width: 16px;
+		height: 16px;
+		translate: 0 -50%;
+		fill: none;
+		stroke: var(--muted);
+		stroke-width: 2;
+		stroke-linecap: round;
 	}
 	input {
 		width: 100%;
-		background: var(--panel-2);
-		border: 1px solid var(--line);
-		border-radius: 8px;
-		padding: 8px 12px;
+		height: 38px;
+		padding: 0 12px 0 34px;
+		background: var(--card);
+		border: 1.5px solid var(--line);
+		border-radius: var(--radius);
+	}
+	input:focus {
+		border-color: var(--ink);
+		outline: none;
+	}
+	.count {
+		color: var(--muted);
+		white-space: nowrap;
 	}
 	.kinds {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 6px;
+		gap: 2px 14px;
+		margin-bottom: 12px;
 	}
 	.kinds button {
-		background: var(--panel-2);
-		border: 1px solid var(--line);
-		border-radius: 999px;
-		padding: 2px 12px;
-		font-size: 0.85rem;
-		color: var(--muted);
+		padding: 2px 0;
+		border: 0;
+		border-bottom: 2px solid transparent;
+		background: none;
+		color: var(--ink-2);
+		font-weight: 600;
+		font-size: 0.88rem;
+	}
+	.kinds button:hover {
+		color: var(--ink);
 	}
 	.kinds button[aria-pressed='true'] {
-		background: var(--accent);
-		border-color: var(--accent);
-		color: #fff;
+		color: var(--ink);
+		border-bottom-color: var(--yellow);
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
 		gap: 6px;
 	}
 	.item {
-		background: var(--panel-2);
-		border: 1px solid transparent;
-		border-radius: 10px;
-		padding: 4px;
-		transition: border-color 0.15s;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2px;
+		padding: 6px 4px 4px;
+		background: var(--card);
+		border: 1.5px solid transparent;
+		border-radius: var(--radius);
 	}
 	.item:hover {
 		border-color: var(--line);
 	}
 	.item[aria-pressed='true'] {
-		border-color: var(--accent-2);
-		background: #24222a;
+		background: #fff3c4;
+		border-color: var(--ink);
 	}
-	.none {
-		display: grid;
-		place-items: center;
-		aspect-ratio: 1;
-	}
-	.empty {
+	.id {
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 		color: var(--muted);
-		font-size: 0.85rem;
+		font-size: 0.68rem;
+	}
+	.item[aria-pressed='true'] .id {
+		color: var(--ink);
 	}
 	.sentinel {
 		height: 1px;

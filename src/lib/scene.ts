@@ -89,6 +89,9 @@ export class Stage {
 	 * below 1 slides towards `body`, the whole figure.
 	 */
 	frame(focus: Box3, body: Box3, view: View) {
+		// Without head nor headgear, frame what is left; with nothing, a standard head spot
+		if (focus.isEmpty())
+			focus = body.isEmpty() ? new Box3(new Vector3(-12, 24, -12), new Vector3(12, 52, 12)) : body;
 		const size = focus.getSize(new Vector3());
 		const center = focus.getCenter(new Vector3());
 		const extent = Math.max(size.y * 2.05, size.x * 2, 70);

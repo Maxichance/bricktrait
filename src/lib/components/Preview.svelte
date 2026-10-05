@@ -116,7 +116,7 @@
 		height: 22px;
 		border-radius: 50%;
 		border: 3px solid rgb(255 255 255 / 0.2);
-		border-top-color: var(--accent-2);
+		border-top-color: var(--yellow);
 		animation: spin 0.8s linear infinite;
 	}
 	.error {
@@ -125,8 +125,8 @@
 		margin: 0;
 		padding: 8px 12px;
 		border-radius: 8px;
-		background: #3a1020;
-		color: #ffb3c4;
+		background: var(--red);
+		color: #fff;
 		font-size: 0.9rem;
 	}
 	@keyframes spin {

@@ -42,7 +42,7 @@ export function fromHash(hash: string): Portrait | null {
 		const b64 = hash.replace(/^#/, '').replaceAll('-', '+').replaceAll('_', '/');
 		const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 		const [figure, view, style] = JSON.parse(new TextDecoder().decode(bytes));
-		if (!figure?.head?.id || !figure?.torso?.id) return null;
+		if (!figure?.head || !figure?.torso) return null;
 		return {
 			// Links made before legs existed
 			figure: { ...figure, legs: figure.legs ?? { ...initial.figure.legs } },

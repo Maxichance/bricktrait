@@ -18,7 +18,11 @@
 </script>
 
 <fieldset>
-	<legend>{label} <span class="name">{current?.name ?? value}</span></legend>
+	<legend>
+		<span class="label">{label}</span>
+		<span class="name">{current?.name ?? value}</span>
+		<span class="mono code">#{value}</span>
+	</legend>
 	<div class="list">
 		{#each shown as c (c.code)}
 			<button
@@ -26,14 +30,14 @@
 				class="swatch"
 				class:metal={c.finish}
 				style:--c={c.hex}
-				title={c.name}
+				title="{c.name} ({c.code})"
 				aria-label={c.name}
 				aria-pressed={c.code === value}
 				onclick={() => onchange(c.code)}
 			></button>
 		{/each}
 		<button type="button" class="more" onclick={() => (all = !all)}>
-			{all ? 'Less' : 'All colours'}
+			{all ? 'Fewer' : `All ${colors.filter((c) => !c.alpha).length}`}
 		</button>
 	</div>
 </fieldset>
@@ -43,48 +47,60 @@
 		border: 0;
 		margin: 0;
 		padding: 0;
+		min-width: 0;
 	}
 	legend {
-		font-size: 0.8rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--muted);
-		margin-bottom: 6px;
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		padding: 0;
+		margin-bottom: 8px;
 	}
 	.name {
-		text-transform: none;
-		letter-spacing: 0;
-		color: var(--text);
-		margin-left: 4px;
+		font-weight: 600;
+		font-size: 0.9rem;
+	}
+	.code {
+		color: var(--muted);
 	}
 	.list {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 5px;
+		gap: 4px;
 		align-items: center;
 	}
 	.swatch {
 		width: 24px;
 		height: 24px;
-		border-radius: 50%;
-		border: 1px solid rgb(255 255 255 / 0.15);
-		background: var(--c);
 		padding: 0;
+		border: 0;
+		border-radius: 3px;
+		background: var(--c);
+		box-shadow:
+			inset 0 0 0 1px rgb(0 0 0 / 0.18),
+			inset 0 -3px 0 rgb(0 0 0 / 0.12);
 	}
 	.swatch.metal {
-		background: radial-gradient(circle at 35% 30%, #fff8 0 15%, transparent 45%), var(--c);
+		background: linear-gradient(135deg, #fff9 0 20%, transparent 55%), var(--c);
+	}
+	.swatch:hover {
+		transform: translateY(-1px);
 	}
 	.swatch[aria-pressed='true'] {
-		outline: 2px solid var(--text);
-		outline-offset: 2px;
+		box-shadow:
+			0 0 0 2px var(--card),
+			0 0 0 3.5px var(--ink);
 	}
 	.more {
-		background: none;
-		border: 1px solid var(--line);
-		border-radius: 999px;
-		color: var(--muted);
-		font-size: 0.78rem;
-		padding: 2px 10px;
 		height: 24px;
+		padding: 0 8px;
+		margin-left: 4px;
+		border: 0;
+		background: none;
+		color: var(--ink-2);
+		font-size: 0.8rem;
+		font-weight: 600;
+		text-decoration: underline;
+		text-underline-offset: 3px;
 	}
 </style>
