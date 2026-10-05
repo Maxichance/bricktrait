@@ -1,9 +1,10 @@
 <script lang="ts">
-	import type { Color } from '#lib/ldraw.ts';
+	import type { Category, Color } from '#lib/ldraw.ts';
 	import Thumb from './Thumb.svelte';
 
 	let {
 		label,
+		cat,
 		id,
 		name,
 		fullName = '',
@@ -13,6 +14,7 @@
 		onremove
 	}: {
 		label: string;
+		cat: Category;
 		/** null when the slot is empty */
 		id: string | null;
 		name: string;
@@ -36,7 +38,7 @@
 	>
 		<span class="tile">
 			{#if id}
-				<Thumb {id} color={color?.code ?? 16} />
+				<Thumb {id} {cat} color={color?.code ?? 16} />
 			{:else}
 				<span class="plus" aria-hidden="true">+</span>
 			{/if}

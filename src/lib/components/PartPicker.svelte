@@ -77,7 +77,7 @@
 					title={p.name}
 					onclick={() => onpick(p.id)}
 				>
-					<Thumb id={p.id} {color} />
+					<Thumb id={p.id} {color} cat={p.cat} />
 					<span class="id mono">{p.id}</span>
 					<span class="sr-only">{p.name}</span>
 				</button>

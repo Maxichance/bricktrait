@@ -312,6 +312,7 @@
 					{@const f = portrait.figure[s.id]}
 					<Slot
 						label={s.label}
+						cat={s.id}
 						id={f.id}
 						name={shortName(find(f.id)?.name ?? f.id ?? '')}
 						fullName={find(f.id)?.name ?? ''}

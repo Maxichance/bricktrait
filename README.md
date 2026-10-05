@@ -44,8 +44,9 @@ LDraw parts library ──► scripts/build-parts.mjs ──► static/ldraw/ �
 
 1. `scripts/fetch-ldraw.mjs` downloads the official [LDraw parts library](https://library.ldraw.org).
 2. `scripts/build-parts.mjs` picks the minifig heads, headgear, torsos and legs, drops the few that rely on textures (not supported by three.js), and resolves every sub-file they need. Files shared by many parts go into one `core.ldr` loaded once, files shared by a few are served individually, and each part gets a small pack with what is its own (about 32 kB on average).
-3. In the browser, three.js' [`LDrawLoader`](https://threejs.org/docs/#examples/en/loaders/LDrawLoader) parses the packs and the parts are assembled with the standard minifig offsets from the LDraw torso shortcuts.
-4. The figure is rendered on a transparent canvas, then composited in 2D with the background, the ring and the retro filter.
+3. `scripts/build-thumbs.mjs` renders a WebP thumbnail of every part with the app's own code, in a headless Chrome, so the catalogue shows up at once. Other colours are rendered live.
+4. In the browser, three.js' [`LDrawLoader`](https://threejs.org/docs/#examples/en/loaders/LDrawLoader) parses the packs and the parts are assembled with the standard minifig offsets from the LDraw torso shortcuts.
+5. The figure is rendered on a transparent canvas, then composited in 2D with the background, the ring and the retro filter.
 
 ## Getting started
 
@@ -56,20 +57,23 @@ git clone https://github.com/Maxichance/bricktrait.git
 cd bricktrait
 npm ci
 npm run parts   # downloads LDraw (~150 MB) into .ldraw/ and builds static/ldraw/
+npm run thumbs  # optional: pre-renders the thumbnails (needs Chrome, a few minutes)
 npm run dev
 ```
 
 `npm run parts` only downloads the library once. Set `LDRAW_DIR` to use a copy you already have.
 
-| Command           | What it does                                           |
-| ----------------- | ------------------------------------------------------ |
-| `npm run dev`     | Development server                                     |
-| `npm run parts`   | Fetch LDraw and generate the parts                     |
-| `npm run build`   | Static build in `build/` (`BASE_PATH` for a subfolder) |
-| `npm run preview` | Serve the build locally                                |
-| `npm run check`   | Type check                                             |
-| `npm run lint`    | Prettier check                                         |
-| `npm run format`  | Prettier                                               |
+| Command           | What it does                                             |
+| ----------------- | -------------------------------------------------------- |
+| `npm run dev`     | Development server                                       |
+| `npm run parts`   | Fetch LDraw and generate the parts                       |
+| `npm run thumbs`  | Pre-render the part thumbnails (`CHROME_PATH` if needed) |
+| `npm run build`   | Static build in `build/` (`BASE_PATH` for a subfolder)   |
+| `npm run preview` | Serve the build locally                                  |
+| `npm run check`   | Type check                                               |
+| `npm run lint`    | Prettier check                                           |
+| `npm test`        | Unit tests (Vitest)                                      |
+| `npm run format`  | Prettier                                                 |
 
 ## Project structure
 
@@ -77,6 +81,7 @@ npm run dev
 scripts/
   fetch-ldraw.mjs       download the LDraw library
   build-parts.mjs       select, pack and credit the parts
+  build-thumbs.mjs      pre-render the thumbnails (driving scripts/thumbs/)
 src/lib/
   ldraw.ts              part loading and minifig assembly
   scene.ts              three.js stage: lights, camera, framing

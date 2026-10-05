@@ -1,15 +1,42 @@
-// Part thumbnails, rendered one at a time on a single offscreen stage.
-import { library, standardLegs, STANDARD_LEGS } from './ldraw';
+// Part thumbnails. Most come pre-rendered from the build (static/thumbs/, see
+// scripts/build-thumbs.mjs) in each slot's default colour; other colours are
+// rendered here, one at a time on a single offscreen stage.
+import { library, standardLegs, STANDARD_LEGS, type Category } from './ldraw';
 import { Stage } from './scene';
 
-const SIZE = 160;
+export const THUMB_SIZE = 160;
+
+/** Colour of the pre-rendered thumbnails, matching the default figure */
+export const THUMB_COLORS: Partial<Record<Category, number>> = {
+	head: 14,
+	headgear: 6,
+	neck: 6,
+	back: 4,
+	torso: 15,
+	legs: 1
+};
+
+/** Renders one part, shared by the app and the build script. */
+export async function drawThumb(stage: Stage, id: string, color: number) {
+	const parts = id === STANDARD_LEGS ? standardLegs(color, color) : [{ id, color }];
+	stage.setModel(await library.build(parts));
+	stage.fit({ yaw: -25, pitch: 12, zoom: 1 });
+	const canvas = stage.render(THUMB_SIZE);
+	stage.setModel(null);
+	return canvas;
+}
+
+/** Where the pre-rendered thumbnail of a part is served. */
+export const staticThumb = (id: string) =>
+	library.base.replace(/ldraw\/$/, '') + `thumbs/${encodeURIComponent(id)}.webp`;
+
 const cache = new Map<string, Promise<string>>();
 let stage: Stage | null = null;
 let queue: Promise<unknown> = Promise.resolve();
 
 /**
- * Resolves to an object URL. `wanted` is checked when the thumbnail's turn
- * comes, so items scrolled away in the meantime are skipped (and rejected).
+ * Live render, resolves to an object URL. `wanted` is checked when the
+ * thumbnail's turn comes, so items scrolled away meanwhile are skipped (rejected).
  */
 export function thumbnail(id: string, color: number, wanted: () => boolean): Promise<string> {
 	const key = `${id}:${color}`;
@@ -18,12 +45,8 @@ export function thumbnail(id: string, color: number, wanted: () => boolean): Pro
 		url = queue.then(async () => {
 			if (!wanted()) throw new Error('skipped');
 			stage ??= new Stage();
-			const parts = id === STANDARD_LEGS ? standardLegs(color, color) : [{ id, color }];
-			stage.setModel(await library.build(parts));
-			stage.fit({ yaw: -25, pitch: 12, zoom: 1 });
-			const canvas = stage.render(SIZE);
-			const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r));
-			stage.setModel(null);
+			const canvas = await drawThumb(stage, id, color);
+			const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/webp', 0.9));
 			if (!blob) throw new Error('render failed');
 			return URL.createObjectURL(blob);
 		});
