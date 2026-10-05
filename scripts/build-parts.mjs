@@ -14,13 +14,49 @@ const OUT = path.resolve('static/ldraw');
 // A file referenced by at least this many parts goes in core.ldr
 const CORE_MIN_USES = Number(process.env.CORE_MIN_USES ?? 10);
 
+// Each slot of the figure and the kinds shown as filters, first match wins.
+// Neck and back accessories hang from the torso top, headgear from the head top.
 const GROUPS = [
-	{ cat: 'head', re: /^Minifig Head\b(?! ?(Modified|Cover))/ },
-	{ cat: 'headgear', re: /^Minifig (Hair|Hat|Helmet|Headdress|Cap|Hood)\b/ },
-	{ cat: 'torso', re: /^Minifig Torso\b/ },
+	{ cat: 'head', kinds: [[/^Minifig Head\b(?! ?(Modified|Cover))/]] },
+	{
+		cat: 'neck',
+		kinds: [
+			[/^Minifig (Hair )?(Beard|Moustache)\b/, 'Beard'],
+			[/^Minifig (Neckwear|Neck|Bandana|Collar|Scarf|Bowtie)\b/, 'Neckwear'],
+			[/^Minifig (Armour|Breastplate|Epaulette|Shoulder)\b/, 'Armour'],
+			[/^Minifig (Vest|Lifevest|Life Jacket|Lifeguard)\b/, 'Vest']
+		]
+	},
+	{
+		cat: 'back',
+		kinds: [
+			// Flat cloth capes are sewn sheets, only their formed versions look right
+			[/^Minifig Cape\b(?!.*Cloth(?!.*Formed))/, 'Cape'],
+			[/^Minifig (Backpack|Airtanks|Jet-Pack|Scuba)\b/, 'Pack'],
+			[/^Minifig Wings\b/, 'Wings']
+		]
+	},
+	{ cat: 'torso', kinds: [[/^Minifig Torso\b/]] },
 	// Complete lower bodies: hips and legs, skirts, ghost hips...
-	{ cat: 'legs', re: /^Minifig Hips\b/ }
+	{ cat: 'legs', kinds: [[/^Minifig Hips\b/]] },
+	{
+		// Up to two words before the noun ("Minifig Police Hat"), but not "... with Hat"
+		cat: 'headgear',
+		kinds: [
+			[/^Minifig ((?!with\b)\S+ ){0,2}Hair\b/, 'Hair'],
+			[/^Minifig ((?!with\b)\S+ ){0,2}Cap\b/, 'Cap'],
+			[/^Minifig ((?!with\b)\S+ ){0,2}Helmet\b/, 'Helmet'],
+			[/^Minifig ((?!with\b)\S+ ){0,2}Hood\b/, 'Hood'],
+			[/^Minifig ((?!with\b)\S+ ){0,2}(Hat|Crown|Tiara|Turban|Bonnet|Beret)\b/, 'Hat'],
+			[/^Minifig ((?!with\b)\S+ ){0,2}(Headdress|Headphones|Headset)\b/, 'Headdress']
+		]
+	}
 ];
+function classify(desc) {
+	for (const g of GROUPS)
+		for (const [re, kind] of g.kinds) if (re.test(desc)) return { cat: g.cat, kind };
+	return null;
+}
 // Plain arms, hands, hips and legs, used to assemble a standard minifig
 const BODY = ['3818.dat', '3819.dat', '3820.dat', '3815.dat', '3816.dat', '3817.dat'];
 
@@ -135,12 +171,12 @@ for (const file of fs.readdirSync(path.join(LDRAW, 'parts'))) {
 	if (!file.endsWith('.dat')) continue;
 	const desc = header(read(`parts/${file}`));
 	if (/^[~=_|]/.test(desc) || /obsolete|moved to/i.test(desc)) continue;
-	const group = GROUPS.find((g) => g.re.test(desc));
+	const group = classify(desc);
 	if (!group) continue;
 	const deps = closure(file);
 	// LDrawLoader does not support textures
 	if ([...deps.values()].some((k) => /!TEXMAP|!DATA/.test(read(k)))) continue;
-	parts.push({ file, desc, cat: group.cat, deps });
+	parts.push({ file, desc, cat: group.cat, kind: group.kind, deps });
 }
 for (const file of BODY)
 	parts.push({ file, desc: header(read(`parts/${file}`)), cat: 'body', deps: closure(file) });
@@ -184,13 +220,13 @@ for (const p of parts) {
 	bytes += text.length;
 	fs.writeFileSync(path.join(OUT, 'p', `${id}.ldr`), text);
 	const entry = { id, name: p.desc.replace(/^Minifig /, ''), cat: p.cat };
-	if (p.cat === 'headgear') entry.kind = p.desc.split(' ')[1];
+	if (p.kind) entry.kind = p.kind;
 	if (p.cat === 'head') {
 		// Standard heads have their origin on top (stud base) and go down to y=24.
 		// Moulded heads (Sonic, E.T., animals...) have it at the neck instead:
 		// they are placed on the torso as is, and headgear sits on their top.
 		const { top, bottom } = heightOf(p.file);
-		if (bottom <= 10) entry.neck = Math.round(top);
+		if (bottom <= 10) entry.moulded = Math.round(top);
 	}
 	if (p.cat === 'torso') {
 		// Torsos that already come with arms (wings, dual mould, ...)
@@ -261,7 +297,7 @@ for (const f of ['CAreadme.txt', 'CAlicense.txt', 'CAlicense4.txt'])
 const count = (cat) => catalog.filter((c) => c.cat === cat).length;
 const coreSize = fs.statSync(path.join(OUT, 'core.ldr')).size;
 console.log(
-	`${count('head')} heads, ${count('headgear')} headgear, ${count('torso')} torsos, ${count('legs')} legs` +
+	`${count('head')} heads, ${count('headgear')} headgear, ${count('torso')} torsos, ${count('legs')} legs, ${count('neck')} neck, ${count('back')} back` +
 		` | core ${core.length} files ${(coreSize / 1e6).toFixed(1)} MB` +
 		` | shared ${shared.length} files ${(sharedBytes / 1e6).toFixed(1)} MB` +
 		` | packs ${(bytes / 1e6).toFixed(1)} MB (avg ${(bytes / parts.length / 1e3).toFixed(0)} kB,` +

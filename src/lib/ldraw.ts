@@ -3,18 +3,18 @@ import { LDrawLoader } from 'three/addons/loaders/LDrawLoader.js';
 import { LDrawConditionalLineMaterial } from 'three/addons/materials/LDrawConditionalLineMaterial.js';
 import { asset } from '$app/paths';
 
-export type Category = 'head' | 'headgear' | 'torso' | 'legs' | 'body';
+export type Category = 'head' | 'headgear' | 'neck' | 'back' | 'torso' | 'legs' | 'body';
 
 export interface Part {
 	id: string;
 	name: string;
 	cat: Category;
-	/** headgear only: Hair, Hat, Helmet... */
+	/** filter group: Hair, Hat, Helmet, Beard, Cape... */
 	kind?: string;
 	/** torso only: arms are part of the torso */
 	arms?: boolean;
-	/** head only: moulded head with its origin at the neck; value is its top (y) */
-	neck?: number;
+	/** head only: moulded head (origin at the neck), the value is its top (y) */
+	moulded?: number;
 }
 
 export interface Color {
@@ -127,6 +127,10 @@ export const STANDARD_LEGS = 'standard';
 export interface Figure {
 	head: { id: string | null; color: number };
 	headgear: { id: string | null; color: number };
+	/** beards, neckwear, armour, vests: clipped on the torso top */
+	neck: { id: string | null; color: number };
+	/** capes, backpacks, airtanks, wings: clipped on the torso top too */
+	back: { id: string | null; color: number };
 	/** arms and hands are added when the torso has none of its own */
 	torso: { id: string | null; color: number; arms: number; hands: number };
 	/** `color` is the legs colour, `hips` only applies to STANDARD_LEGS */
@@ -136,15 +140,17 @@ export interface Figure {
 export function placements(fig: Figure, torso?: Part, head?: Part): Placement[] {
 	const list: Placement[] = [];
 	// Moulded heads sit on the torso as is, headgear goes on their top
-	const moulded = head?.neck !== undefined;
+	const moulded = head?.moulded !== undefined;
 	if (fig.torso.id) list.push({ id: fig.torso.id, color: fig.torso.color });
 	if (fig.head.id) {
 		list.push({ id: fig.head.id, color: fig.head.color, at: moulded ? [0, 0, 0] : [...HEAD] });
 	}
 	if (fig.headgear.id) {
-		const at: [number, number, number] = moulded ? [0, head!.neck!, 0] : [...HEAD];
+		const at: [number, number, number] = moulded ? [0, head!.moulded!, 0] : [...HEAD];
 		list.push({ id: fig.headgear.id, color: fig.headgear.color, at });
 	}
+	for (const slot of [fig.neck, fig.back])
+		if (slot.id) list.push({ id: slot.id, color: slot.color });
 	if (fig.legs.id === STANDARD_LEGS) {
 		list.push(...standardLegs(fig.legs.hips, fig.legs.color));
 	} else if (fig.legs.id) {

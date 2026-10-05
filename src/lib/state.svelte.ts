@@ -12,6 +12,8 @@ export const initial: Portrait = {
 	figure: {
 		head: { id: '3626cp01', color: 14 },
 		headgear: { id: '3901', color: 6 },
+		neck: { id: null, color: 6 },
+		back: { id: null, color: 4 },
 		torso: { id: '973p01', color: 15, arms: 4, hands: 14 },
 		legs: { id: STANDARD_LEGS, color: 1, hips: 1 }
 	},
@@ -44,8 +46,14 @@ export function fromHash(hash: string): Portrait | null {
 		const [figure, view, style] = JSON.parse(new TextDecoder().decode(bytes));
 		if (!figure?.head || !figure?.torso) return null;
 		return {
-			// Links made before legs existed
-			figure: { ...figure, legs: figure.legs ?? { ...initial.figure.legs } },
+			// Links made before some slots existed get them empty
+			figure: {
+				...structuredClone(initial.figure),
+				neck: { id: null, color: 6 },
+				back: { id: null, color: 4 },
+				legs: { ...initial.figure.legs },
+				...figure
+			},
 			view: { ...initial.view, ...view },
 			style: { ...initial.style, ...style }
 		};
@@ -65,11 +73,13 @@ export function randomize(catalog: Part[]) {
 	// Printed heads have faces, plain ones would look empty
 	const head = pick(of('head').filter((p) => /pattern/i.test(p.name)));
 	// Moulded heads are complete on their own
-	const wear = head.neck === undefined && Math.random() < 0.9 ? pick(of('headgear')) : null;
+	const wear = head.moulded === undefined && Math.random() < 0.9 ? pick(of('headgear')) : null;
 	const colors = COMMON_COLORS.slice(6, 30);
 	portrait.figure = {
 		head: { id: head.id, color: pick(skin) },
 		headgear: { id: wear?.id ?? null, color: pick(colors) },
+		neck: { id: Math.random() < 0.2 ? pick(of('neck')).id : null, color: pick(colors) },
+		back: { id: Math.random() < 0.2 ? pick(of('back')).id : null, color: pick(colors) },
 		torso: { id: torso.id, color: pick(colors), arms: pick(colors), hands: pick(skin) },
 		legs:
 			Math.random() < 0.6
