@@ -25,3 +25,6 @@ vite.config.ts.timestamp-*
 # LDraw library and generated parts (npm run parts)
 /.ldraw
 /static/ldraw
+
+# Social preview card, uploaded by hand in the repo settings
+/social

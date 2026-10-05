@@ -20,11 +20,13 @@
 ## Features
 
 - **3,000+ real parts** from the LDraw library: 560 heads, 540 hair pieces, hats and helmets, 1,650 torsos and 320 hips and legs, all with their original prints.
-- **Any colour** from the LDraw palette for skin, headgear, torso, arms and hands.
+- **Four slots always in view**: headgear, head, torso and legs, each with its part, colour and part number. Click one to browse its parts, remove any of them with ×.
+- **Any colour** from the LDraw palette for skin, headgear, torso, arms, hands, hips and legs.
 - **Game portrait look**: starry background, blue ring with its dark inner edge, hard key light and a soft, low-res "video capture" finish. Every bit of it can be turned off or recoloured.
 - **Drag to turn, scroll to zoom**, sliders for fine tuning. Zoom out and the portrait turns into the whole figure, legs included.
 - **Export** as PNG in 256, 512 or 1024 px, with a transparent background if you want.
 - **Share links**: the whole portrait lives in the URL.
+- **Undo and redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>), slots on <kbd>1</kbd>–<kbd>4</kbd>, <kbd>Del</kbd> to remove a part.
 - **Random** button for when you have no idea.
 - Static site, no account, no server, no tracking.
 
@@ -60,6 +62,7 @@ npm run dev
 | `npm run build`   | Static build in `build/` (`BASE_PATH` for a subfolder) |
 | `npm run preview` | Serve the build locally                                |
 | `npm run check`   | Type check                                             |
+| `npm run lint`    | Prettier check                                         |
 | `npm run format`  | Prettier                                               |
 
 ## Project structure
@@ -75,7 +78,8 @@ src/lib/
   render.ts             portrait to pixels
   thumbs.ts             part thumbnails
   state.svelte.ts       portrait state, share links, random figure
-  components/           Preview, PartPicker, Swatches, Thumb
+  history.svelte.ts     undo and redo
+  components/           Preview, Slot, PartPicker, Swatches, Thumb
 src/routes/+page.svelte the editor
 ```
 
@@ -87,6 +91,7 @@ Deployment to GitHub Pages is handled by [`.github/workflows/deploy.yml`](.githu
 - **Parts**: the [LDraw.org Parts Library](https://library.ldraw.org), by its contributors, licensed under [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/) and [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The files are repackaged (blank lines removed, references lower-cased), their geometry is not modified. The build ships `CREDITS.txt` with the author and licence of every file, next to the library's `CAreadme.txt` and licence texts.
 - **Colours**: `LDConfig.ldr` from the LDraw library, same licence.
 - **Libraries**: [three.js](https://github.com/mrdoob/three.js) (MIT), [Svelte and SvelteKit](https://github.com/sveltejs/kit) (MIT), [fflate](https://github.com/101arrowz/fflate) (MIT).
+- **Fonts**: [Archivo](https://github.com/Omnibus-Type/Archivo) and [IBM Plex Mono](https://github.com/IBM/plex), both under the SIL Open Font License, self-hosted through Fontsource.
 
 The portrait style is a tribute to the character portraits of the mid-2000s brick video games. No asset from those games is used: everything is rendered from the LDraw models.
 
