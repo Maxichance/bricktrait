@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { renderer } from '#lib/render.ts';
 	import { initial, portrait } from '#lib/state.svelte.ts';
+	import { MIN_ZOOM } from '#lib/scene.ts';
 
 	const SIZE = 640;
 	let canvas: HTMLCanvasElement;
@@ -51,7 +52,7 @@
 	}
 	function wheel(e: WheelEvent) {
 		e.preventDefault();
-		portrait.view.zoom = clamp(portrait.view.zoom * (e.deltaY < 0 ? 1.06 : 1 / 1.06), 0.6, 2);
+		portrait.view.zoom = clamp(portrait.view.zoom * (e.deltaY < 0 ? 1.06 : 1 / 1.06), MIN_ZOOM, 2);
 	}
 	function keys(e: KeyboardEvent) {
 		const v = portrait.view;

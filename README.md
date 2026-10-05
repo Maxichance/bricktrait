@@ -19,10 +19,10 @@
 
 ## Features
 
-- **2,700+ real parts** from the LDraw library: 560 heads, 540 hair pieces, hats and helmets, 1,650 torsos, all with their original prints.
+- **3,000+ real parts** from the LDraw library: 560 heads, 540 hair pieces, hats and helmets, 1,650 torsos and 320 hips and legs, all with their original prints.
 - **Any colour** from the LDraw palette for skin, headgear, torso, arms and hands.
 - **Game portrait look**: starry background, blue ring with its dark inner edge, hard key light and a soft, low-res "video capture" finish. Every bit of it can be turned off or recoloured.
-- **Drag to turn, scroll to zoom**, sliders for fine tuning.
+- **Drag to turn, scroll to zoom**, sliders for fine tuning. Zoom out and the portrait turns into the whole figure, legs included.
 - **Export** as PNG in 256, 512 or 1024 px, with a transparent background if you want.
 - **Share links**: the whole portrait lives in the URL.
 - **Random** button for when you have no idea.
@@ -35,7 +35,7 @@ LDraw parts library ──► scripts/build-parts.mjs ──► static/ldraw/ �
 ```
 
 1. `scripts/fetch-ldraw.mjs` downloads the official [LDraw parts library](https://library.ldraw.org).
-2. `scripts/build-parts.mjs` picks the minifig heads, headgear and torsos, drops the few that rely on textures (not supported by three.js), and resolves every sub-file they need. Files shared by many parts go into one `core.ldr` loaded once, files shared by a few are served individually, and each part gets a small pack with what is its own (34 kB on average).
+2. `scripts/build-parts.mjs` picks the minifig heads, headgear, torsos and legs, drops the few that rely on textures (not supported by three.js), and resolves every sub-file they need. Files shared by many parts go into one `core.ldr` loaded once, files shared by a few are served individually, and each part gets a small pack with what is its own (about 32 kB on average).
 3. In the browser, three.js' [`LDrawLoader`](https://threejs.org/docs/#examples/en/loaders/LDrawLoader) parses the packs and the parts are assembled with the standard minifig offsets from the LDraw torso shortcuts.
 4. The figure is rendered on a transparent canvas, then composited in 2D with the background, the ring and the retro filter.
 

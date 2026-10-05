@@ -10,6 +10,7 @@ const RETRO_SCALE = 0.3;
 class PortraitRenderer {
 	private stage: Stage | null = null;
 	private focus: Box3 | null = null;
+	private body: Box3 | null = null;
 	private key = '';
 	private version = 0;
 
@@ -26,13 +27,14 @@ class PortraitRenderer {
 		this.stage.setModel(model);
 		const names = [figure.head.id, figure.headgear.id].filter(Boolean).map((id) => `${id}.dat`);
 		this.focus = this.stage.box(names);
+		this.body = this.stage.box();
 		this.key = key;
 		return true;
 	}
 
 	draw(out: HTMLCanvasElement, size: number, view: View, style: Style) {
-		if (!this.stage || !this.focus) return;
-		this.stage.frame(this.focus, view);
+		if (!this.stage || !this.focus || !this.body) return;
+		this.stage.frame(this.focus, this.body, view);
 		const figure = this.stage.render(style.retro ? Math.round(size * RETRO_SCALE) : size);
 		compose(out, figure, size, style);
 	}

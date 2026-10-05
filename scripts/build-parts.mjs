@@ -17,10 +17,12 @@ const CORE_MIN_USES = Number(process.env.CORE_MIN_USES ?? 10);
 const GROUPS = [
 	{ cat: 'head', re: /^Minifig Head\b(?! ?(Modified|Cover))/ },
 	{ cat: 'headgear', re: /^Minifig (Hair|Hat|Helmet|Headdress|Cap|Hood)\b/ },
-	{ cat: 'torso', re: /^Minifig Torso\b/ }
+	{ cat: 'torso', re: /^Minifig Torso\b/ },
+	// Complete lower bodies: hips and legs, skirts, ghost hips...
+	{ cat: 'legs', re: /^Minifig Hips\b/ }
 ];
-// Plain arms and hands, added around torsos that have none
-const BODY = ['3818.dat', '3819.dat', '3820.dat'];
+// Plain arms, hands, hips and legs, used to assemble a standard minifig
+const BODY = ['3818.dat', '3819.dat', '3820.dat', '3815.dat', '3816.dat', '3817.dat'];
 
 // --- library access -------------------------------------------------------
 
@@ -157,7 +159,13 @@ for (const p of parts) {
 }
 // Classic minifig parts first: printed standard heads, standard torsos, then the rest
 const rank = (p) =>
-	/^3626/.test(p.id) ? (/pattern/i.test(p.name) ? 0 : 1) : /^(973|76382)/.test(p.id) ? 0 : 2;
+	/^3626/.test(p.id)
+		? /pattern/i.test(p.name)
+			? 0
+			: 1
+		: /^(973|76382|73200|970)/.test(p.id)
+			? 0
+			: 2;
 catalog.sort(
 	(a, b) => a.cat.localeCompare(b.cat) || rank(a) - rank(b) || a.name.localeCompare(b.name)
 );
@@ -210,7 +218,7 @@ for (const f of ['CAreadme.txt', 'CAlicense.txt', 'CAlicense4.txt'])
 const count = (cat) => catalog.filter((c) => c.cat === cat).length;
 const coreSize = fs.statSync(path.join(OUT, 'core.ldr')).size;
 console.log(
-	`${count('head')} heads, ${count('headgear')} headgear, ${count('torso')} torsos` +
+	`${count('head')} heads, ${count('headgear')} headgear, ${count('torso')} torsos, ${count('legs')} legs` +
 		` | core ${core.length} files ${(coreSize / 1e6).toFixed(1)} MB` +
 		` | shared ${shared.length} files ${(sharedBytes / 1e6).toFixed(1)} MB` +
 		` | packs ${(bytes / 1e6).toFixed(1)} MB (avg ${(bytes / parts.length / 1e3).toFixed(0)} kB,` +

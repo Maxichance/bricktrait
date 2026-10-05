@@ -1,4 +1,4 @@
-import type { Figure, Part } from './ldraw';
+import { STANDARD_LEGS, type Figure, type Part } from './ldraw';
 import type { View } from './scene';
 import { defaultStyle, type Style } from './compose';
 
@@ -12,7 +12,8 @@ export const initial: Portrait = {
 	figure: {
 		head: { id: '3626cp01', color: 14 },
 		headgear: { id: '3901', color: 6 },
-		torso: { id: '973p01', color: 15, arms: 4, hands: 14 }
+		torso: { id: '973p01', color: 15, arms: 4, hands: 14 },
+		legs: { id: STANDARD_LEGS, color: 1, hips: 1 }
 	},
 	view: { yaw: 0, pitch: 0, zoom: 1 },
 	style: { ...defaultStyle }
@@ -43,7 +44,8 @@ export function fromHash(hash: string): Portrait | null {
 		const [figure, view, style] = JSON.parse(new TextDecoder().decode(bytes));
 		if (!figure?.head?.id || !figure?.torso?.id) return null;
 		return {
-			figure,
+			// Links made before legs existed
+			figure: { ...figure, legs: figure.legs ?? { ...initial.figure.legs } },
 			view: { ...initial.view, ...view },
 			style: { ...initial.style, ...style }
 		};
@@ -67,6 +69,10 @@ export function randomize(catalog: Part[]) {
 	portrait.figure = {
 		head: { id: pick(heads).id, color: pick(skin) },
 		headgear: { id: wear?.id ?? null, color: pick(colors) },
-		torso: { id: torso.id, color: pick(colors), arms: pick(colors), hands: pick(skin) }
+		torso: { id: torso.id, color: pick(colors), arms: pick(colors), hands: pick(skin) },
+		legs:
+			Math.random() < 0.6
+				? { id: STANDARD_LEGS, color: pick(colors), hips: pick(colors) }
+				: { id: pick(of('legs')).id, color: pick(colors), hips: pick(colors) }
 	};
 }

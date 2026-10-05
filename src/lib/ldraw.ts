@@ -3,7 +3,7 @@ import { LDrawLoader } from 'three/addons/loaders/LDrawLoader.js';
 import { LDrawConditionalLineMaterial } from 'three/addons/materials/LDrawConditionalLineMaterial.js';
 import { asset } from '$app/paths';
 
-export type Category = 'head' | 'headgear' | 'torso' | 'body';
+export type Category = 'head' | 'headgear' | 'torso' | 'legs' | 'body';
 
 export interface Part {
 	id: string;
@@ -115,11 +115,18 @@ const HAND_LEFT = {
 	m: [0.985, 0.1202, -0.1202, -0.17, 0.6964, -0.6964, 0, 0.707, 0.707]
 } as const;
 const HEAD = [0, -24, 0] as [number, number, number];
+const HIPS = [0, 32, 0] as [number, number, number];
+const LEGS = [0, 44, 0] as [number, number, number];
+
+/** Legs id for plain hips and legs with their own colours */
+export const STANDARD_LEGS = 'standard';
 
 export interface Figure {
 	head: { id: string; color: number };
 	headgear: { id: string | null; color: number };
 	torso: { id: string; color: number; arms: number; hands: number };
+	/** `color` is the legs colour, `hips` only applies to STANDARD_LEGS */
+	legs: { id: string | null; color: number; hips: number };
 }
 
 export function placements(fig: Figure, torsoHasArms: boolean): Placement[] {
@@ -128,6 +135,11 @@ export function placements(fig: Figure, torsoHasArms: boolean): Placement[] {
 		{ id: fig.head.id, color: fig.head.color, at: HEAD }
 	];
 	if (fig.headgear.id) list.push({ id: fig.headgear.id, color: fig.headgear.color, at: HEAD });
+	if (fig.legs.id === STANDARD_LEGS) {
+		list.push(...standardLegs(fig.legs.hips, fig.legs.color));
+	} else if (fig.legs.id) {
+		list.push({ id: fig.legs.id, color: fig.legs.color, at: HIPS });
+	}
 	if (!torsoHasArms) {
 		list.push(
 			{ id: '3818', color: fig.torso.arms, ...copy(ARM_RIGHT) },
@@ -137,6 +149,14 @@ export function placements(fig: Figure, torsoHasArms: boolean): Placement[] {
 		);
 	}
 	return list;
+}
+
+export function standardLegs(hips: number, legs: number): Placement[] {
+	return [
+		{ id: '3815', color: hips, at: [...HIPS] },
+		{ id: '3816', color: legs, at: [...LEGS] },
+		{ id: '3817', color: legs, at: [...LEGS] }
+	];
 }
 
 function copy(p: { at: readonly number[]; m: readonly number[] }) {

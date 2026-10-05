@@ -1,17 +1,19 @@
 <script lang="ts">
 	import { asset } from '$app/paths';
-	import { library, type Part } from '#lib/ldraw.ts';
+	import { library, STANDARD_LEGS, type Part } from '#lib/ldraw.ts';
+	import { MIN_ZOOM } from '#lib/scene.ts';
 	import { renderer } from '#lib/render.ts';
 	import { fromHash, initial, portrait, randomize, toHash } from '#lib/state.svelte.ts';
 	import Preview from '#lib/components/Preview.svelte';
 	import PartPicker from '#lib/components/PartPicker.svelte';
 	import Swatches from '#lib/components/Swatches.svelte';
 
-	type Tab = 'head' | 'headgear' | 'torso' | 'style';
+	type Tab = 'head' | 'headgear' | 'torso' | 'legs' | 'style';
 	const TABS: { id: Tab; label: string }[] = [
 		{ id: 'head', label: 'Head' },
 		{ id: 'headgear', label: 'Headgear' },
 		{ id: 'torso', label: 'Torso' },
+		{ id: 'legs', label: 'Legs' },
 		{ id: 'style', label: 'Style' }
 	];
 	const BACKGROUNDS = [
@@ -31,6 +33,10 @@
 	const heads = $derived(of('head'));
 	const headgear = $derived(of('headgear'));
 	const torsos = $derived(of('torso'));
+	const legs = $derived<Part[]>([
+		{ id: STANDARD_LEGS, name: 'Standard hips and legs', cat: 'legs' },
+		...of('legs')
+	]);
 	const torso = $derived(catalog.find((p) => p.id === portrait.figure.torso.id));
 
 	$effect(() => {
@@ -192,6 +198,30 @@
 					color={f.color}
 					onpick={(id) => id && (f.id = id)}
 				/>
+			{:else if tab === 'legs'}
+				{@const f = portrait.figure.legs}
+				{#if f.id === STANDARD_LEGS}
+					<Swatches
+						label="Hips"
+						value={f.hips}
+						colors={library.colors}
+						onchange={(c) => (f.hips = c)}
+					/>
+				{/if}
+				<Swatches
+					label="Legs"
+					value={f.color}
+					colors={library.colors}
+					onchange={(c) => (f.color = c)}
+				/>
+				<p class="muted">Legs show up when you zoom out.</p>
+				<PartPicker
+					parts={legs}
+					selected={f.id}
+					color={f.color}
+					none
+					onpick={(id) => (f.id = id)}
+				/>
 			{:else}
 				{@const s = portrait.style}
 				{@const v = portrait.view}
@@ -240,7 +270,7 @@
 					</label>
 					<label class="row">
 						<span>Zoom <small>{v.zoom.toFixed(2)}×</small></span>
-						<input type="range" min="0.6" max="2" step="0.01" bind:value={v.zoom} />
+						<input type="range" min={MIN_ZOOM} max="2" step="0.01" bind:value={v.zoom} />
 					</label>
 				</div>
 			{/if}

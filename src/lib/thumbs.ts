@@ -1,5 +1,5 @@
 // Part thumbnails, rendered one at a time on a single offscreen stage.
-import { library } from './ldraw';
+import { library, standardLegs, STANDARD_LEGS } from './ldraw';
 import { Stage } from './scene';
 
 const SIZE = 160;
@@ -18,7 +18,8 @@ export function thumbnail(id: string, color: number, wanted: () => boolean): Pro
 		url = queue.then(async () => {
 			if (!wanted()) throw new Error('skipped');
 			stage ??= new Stage();
-			stage.setModel(await library.build([{ id, color }]));
+			const parts = id === STANDARD_LEGS ? standardLegs(color, color) : [{ id, color }];
+			stage.setModel(await library.build(parts));
 			stage.fit({ yaw: -25, pitch: 12, zoom: 1 });
 			const canvas = stage.render(SIZE);
 			const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r));

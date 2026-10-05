@@ -3,6 +3,7 @@ import {
 	Box3,
 	DirectionalLight,
 	Group,
+	Mesh,
 	HemisphereLight,
 	MathUtils,
 	Object3D,
@@ -26,6 +27,8 @@ export interface View {
 }
 
 const FOV = 20;
+/** Zoom at which the whole figure is in view */
+export const MIN_ZOOM = 0.4;
 
 /** Offscreen renderer with a transparent background. */
 export class Stage {
@@ -82,14 +85,21 @@ export class Stage {
 
 	/**
 	 * Portrait framing: the camera aims at `focus` (usually head + headgear),
-	 * a bit low so the shoulders show, and scales with its size.
+	 * a bit low so the shoulders show, and scales with its size. Zooming out
+	 * below 1 slides towards `body`, the whole figure.
 	 */
-	frame(focus: Box3, view: View) {
+	frame(focus: Box3, body: Box3, view: View) {
 		const size = focus.getSize(new Vector3());
 		const center = focus.getCenter(new Vector3());
-		const extent = Math.max(size.y * 2.05, size.x * 2, 70) / view.zoom;
+		const extent = Math.max(size.y * 2.05, size.x * 2, 70);
 		const target = new Vector3(center.x, center.y - extent * 0.08, center.z);
-		this.aim(target, extent, view);
+		if (view.zoom >= 1 || body.isEmpty()) return this.aim(target, extent / view.zoom, view);
+
+		const t = MathUtils.smoothstep(1 - view.zoom, 0, 1 - MIN_ZOOM);
+		const bodySize = body.getSize(new Vector3());
+		// The disc is round: the whole figure has to fit inside the circle, not the square
+		const whole = Math.max(bodySize.y, bodySize.x) * 1.6;
+		this.aim(target.lerp(body.getCenter(new Vector3()), t), MathUtils.lerp(extent, whole, t), view);
 	}
 
 	/** Fits the whole model, for thumbnails. */
@@ -116,13 +126,14 @@ export class Stage {
 	}
 
 	/** Bounding box of the given children of the model, in world space. */
-	box(names: string[]) {
+	/** With no names, the whole model. */
+	box(names?: string[]) {
 		const box = new Box3();
 		// Measured facing the camera, so framing does not move when turning
 		this.pivot.rotation.y = 0;
 		this.pivot.updateMatrixWorld(true);
 		this.model?.traverse((o) => {
-			if (names.includes(o.name)) box.expandByObject(o);
+			if (o instanceof Mesh && (!names || names.some((n) => isIn(o, n)))) box.expandByObject(o);
 		});
 		return box;
 	}
@@ -133,4 +144,9 @@ export class Stage {
 		this.renderer.render(this.scene, this.camera);
 		return this.renderer.domElement;
 	}
+}
+
+function isIn(o: Object3D, name: string) {
+	for (let p: Object3D | null = o; p; p = p.parent) if (p.name === name) return true;
+	return false;
 }
