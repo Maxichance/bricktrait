@@ -1,7 +1,6 @@
 import { Group, LineSegments, Mesh } from 'three';
 import { LDrawLoader } from 'three/addons/loaders/LDrawLoader.js';
 import { LDrawConditionalLineMaterial } from 'three/addons/materials/LDrawConditionalLineMaterial.js';
-import { asset } from '$app/paths';
 
 export type Category = 'head' | 'headgear' | 'neck' | 'back' | 'torso' | 'legs' | 'body';
 
@@ -34,10 +33,11 @@ export interface Placement {
 	m?: number[];
 }
 
-const LIB = asset('ldraw/catalog.json').replace(/catalog\.json$/, '');
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 class Library {
+	/** URL of the generated parts folder, set by the app before the first use */
+	base = '/ldraw/';
 	private loader = new LDrawLoader();
 	private packs = new Map<string, Promise<string>>();
 	private ready: Promise<void> | null = null;
@@ -46,13 +46,13 @@ class Library {
 
 	init() {
 		this.ready ??= (async () => {
-			this.loader.setPartsLibraryPath(LIB);
+			this.loader.setPartsLibraryPath(this.base);
 			this.loader.setConditionalLineMaterial(LDrawConditionalLineMaterial);
 			const [catalog, colors, core] = await Promise.all([
-				fetch(`${LIB}catalog.json`).then((r) => r.json()),
-				fetch(`${LIB}colors.json`).then((r) => r.json()),
-				fetch(`${LIB}core.ldr`).then((r) => r.text()),
-				this.loader.preloadMaterials(`${LIB}LDConfig.ldr`)
+				fetch(`${this.base}catalog.json`).then((r) => r.json()),
+				fetch(`${this.base}colors.json`).then((r) => r.json()),
+				fetch(`${this.base}core.ldr`).then((r) => r.text()),
+				this.loader.preloadMaterials(`${this.base}LDConfig.ldr`)
 			]);
 			this.catalog = catalog;
 			this.colors = colors;
@@ -69,7 +69,7 @@ class Library {
 	private pack(id: string) {
 		let text = this.packs.get(id);
 		if (!text) {
-			text = fetch(`${LIB}p/${encodeURIComponent(id)}.ldr`).then((r) => {
+			text = fetch(`${this.base}p/${encodeURIComponent(id)}.ldr`).then((r) => {
 				if (!r.ok) throw new Error(`Part ${id} not found`);
 				return r.text();
 			});
@@ -104,6 +104,19 @@ class Library {
 }
 
 export const library = new Library();
+
+/**
+ * Short display name: "Head with Standard Grin Pattern (Hollow Stud)" -> "Standard Grin".
+ * The full LDraw name stays available as a tooltip.
+ */
+export function shortName(name: string) {
+	const short = name
+		.replace(/\s*\((Hollow Stud|Solid Stud|Complete|Formed|Needs Work)\)/gi, '')
+		.replace(/ Pattern\b/g, '')
+		.replace(/^(Head|Torso|Hips and Legs|Hips) (with )?/, '')
+		.trim();
+	return short ? short[0].toUpperCase() + short.slice(1) : name;
+}
 
 // Standard minifig assembly, from the LDraw torso shortcuts (e.g. 12896.dat)
 const ARM_RIGHT = { at: [-15.552, 9, 0], m: [0.985, -0.17, 0, 0.17, 0.985, 0, 0, 0, 1] } as const;

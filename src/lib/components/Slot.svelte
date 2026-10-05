@@ -6,6 +6,7 @@
 		label,
 		id,
 		name,
+		fullName = '',
 		color,
 		active,
 		onselect,
@@ -15,6 +16,8 @@
 		/** null when the slot is empty */
 		id: string | null;
 		name: string;
+		/** full LDraw name, as a tooltip */
+		fullName?: string;
 		color: Color | undefined;
 		active: boolean;
 		onselect: () => void;
@@ -27,7 +30,8 @@
 		type="button"
 		class="pick"
 		aria-pressed={active}
-		aria-label="{label}: {id ? name : 'empty'}"
+		aria-label="{label}: {id ? fullName || name : 'empty'}"
+		title={id ? fullName || name : undefined}
 		onclick={onselect}
 	>
 		<span class="tile">

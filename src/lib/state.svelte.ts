@@ -1,3 +1,4 @@
+import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import { STANDARD_LEGS, type Figure, type Part } from './ldraw';
 import type { View } from './scene';
 import { defaultStyle, type Style } from './compose';
@@ -31,19 +32,30 @@ export const COMMON_COLORS = [
 
 // --- share links ----------------------------------------------------------
 
-export function toHash(p: Portrait) {
-	const json = JSON.stringify([p.figure, p.view, p.style]);
-	return btoa(String.fromCharCode(...new TextEncoder().encode(json)))
+// "#z" + base64url of the deflated JSON. Links without the "z" are the
+// older, uncompressed ones and still open.
+const COMPRESSED = 'z';
+
+const toB64 = (bytes: Uint8Array) =>
+	btoa(String.fromCharCode(...bytes))
 		.replaceAll('+', '-')
 		.replaceAll('/', '_')
 		.replace(/=+$/, '');
+const fromB64 = (text: string) =>
+	Uint8Array.from(atob(text.replaceAll('-', '+').replaceAll('_', '/')), (c) => c.charCodeAt(0));
+
+export function toHash(p: Portrait) {
+	const json = JSON.stringify([p.figure, p.view, p.style]);
+	return COMPRESSED + toB64(deflateSync(strToU8(json), { level: 9 }));
 }
 
 export function fromHash(hash: string): Portrait | null {
 	try {
-		const b64 = hash.replace(/^#/, '').replaceAll('-', '+').replaceAll('_', '/');
-		const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-		const [figure, view, style] = JSON.parse(new TextDecoder().decode(bytes));
+		const text = hash.replace(/^#/, '');
+		const bytes = text.startsWith(COMPRESSED)
+			? inflateSync(fromB64(text.slice(COMPRESSED.length)))
+			: fromB64(text);
+		const [figure, view, style] = JSON.parse(strFromU8(bytes));
 		if (!figure?.head || !figure?.torso) return null;
 		return {
 			// Links made before some slots existed get them empty

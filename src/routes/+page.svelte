@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { asset } from '$app/paths';
-	import { library, STANDARD_LEGS, type Color, type Part } from '#lib/ldraw.ts';
+	import { library, shortName, STANDARD_LEGS, type Color, type Part } from '#lib/ldraw.ts';
 	import { MIN_ZOOM } from '#lib/scene.ts';
 	import { renderer } from '#lib/render.ts';
 	import { fromHash, initial, portrait, randomize, toHash } from '#lib/state.svelte.ts';
@@ -313,7 +313,8 @@
 					<Slot
 						label={s.label}
 						id={f.id}
-						name={find(f.id)?.name ?? f.id ?? ''}
+						name={shortName(find(f.id)?.name ?? f.id ?? '')}
+						fullName={find(f.id)?.name ?? ''}
 						color={colorOf(f.color)}
 						active={active === s.id}
 						onselect={() => (active = s.id)}
