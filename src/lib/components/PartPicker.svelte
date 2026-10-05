@@ -67,29 +67,45 @@
 		</div>
 	{/if}
 
-	<div class="grid">
-		{#each filtered.slice(0, limit) as p (p.id)}
-			<button
-				type="button"
-				class="item"
-				aria-pressed={p.id === selected}
-				title={p.name}
-				onclick={() => onpick(p.id)}
-			>
-				<Thumb id={p.id} {color} />
-				<span class="id mono">{p.id}</span>
-				<span class="sr-only">{p.name}</span>
-			</button>
-		{/each}
+	<div class="scroll">
+		<div class="grid">
+			{#each filtered.slice(0, limit) as p (p.id)}
+				<button
+					type="button"
+					class="item"
+					aria-pressed={p.id === selected}
+					title={p.name}
+					onclick={() => onpick(p.id)}
+				>
+					<Thumb id={p.id} {color} />
+					<span class="id mono">{p.id}</span>
+					<span class="sr-only">{p.name}</span>
+				</button>
+			{/each}
+		</div>
+		{#if filtered.length > limit}
+			<div bind:this={sentinel} class="sentinel"></div>
+		{:else if !filtered.length}
+			<p class="nothing">Nothing matches “{query}”.</p>
+		{/if}
 	</div>
-	{#if filtered.length > limit}
-		<div bind:this={sentinel} class="sentinel"></div>
-	{:else if !filtered.length}
-		<p class="nothing">Nothing matches “{query}”.</p>
-	{/if}
 </div>
 
 <style>
+	/* Filters stay put, only the grid scrolls */
+	.picker {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		height: 100%;
+	}
+	.scroll {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		margin: 0 -6px;
+		padding: 0 6px 12px;
+	}
 	.filters {
 		display: flex;
 		align-items: center;

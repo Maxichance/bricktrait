@@ -69,8 +69,8 @@
 		gap: 10px;
 		width: 100%;
 		height: 100%;
-		padding: 8px;
-		padding-right: 28px;
+		padding: 7px;
+		padding-right: 26px;
 		text-align: left;
 		background: var(--card);
 		border: 1.5px solid var(--line);
@@ -90,8 +90,8 @@
 		flex: none;
 		display: grid;
 		place-items: center;
-		width: 54px;
-		height: 54px;
+		width: 46px;
+		height: 46px;
 		border-radius: 4px;
 		background: var(--sunk);
 	}

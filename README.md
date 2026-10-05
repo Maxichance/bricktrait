@@ -2,7 +2,9 @@
 
 # bricktrait
 
-**Build a minifig profile picture from thousands of real parts, right in your browser.**
+**Free minifigure avatar maker: build your minifig profile picture from 3,000+ real parts, right in the browser.**
+
+### [▶ Open bricktrait](https://maxichance.github.io/bricktrait/)
 
 [![Live demo](https://img.shields.io/badge/demo-maxichance.github.io%2Fbricktrait-ffcf1f?style=flat-square)](https://maxichance.github.io/bricktrait/)
 [![Deploy](https://img.shields.io/github/actions/workflow/status/Maxichance/bricktrait/deploy.yml?branch=main&style=flat-square&label=deploy)](https://github.com/Maxichance/bricktrait/actions/workflows/deploy.yml)
@@ -13,20 +15,24 @@
 [![Three.js](https://img.shields.io/badge/Three.js-r186-000?style=flat-square&logo=three.js)](https://threejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
-![bricktrait screenshot](docs/screenshot.png)
+![bricktrait, a minifigure avatar and profile picture maker](docs/screenshot.png)
+
+If you like it, a ⭐ helps other people find it.
 
 </div>
 
+bricktrait is a **LEGO® minifigure avatar maker** and **pfp generator** for GitHub, Discord, Twitch or any profile picture. Pick a head, hair or a hat, a beard, a cape, a torso and legs among the real parts of the LDraw library, recolour them, and export a portrait in the style of the classic minifig character select screens.
+
 ## Features
 
-- **3,000+ real parts** from the LDraw library: 560 heads, 540 hair pieces, hats and helmets, 1,650 torsos and 320 hips and legs, all with their original prints.
-- **Four slots always in view**: headgear, head, torso and legs, each with its part, colour and part number. Click one to browse its parts, remove any of them with ×.
+- **3,000+ real parts** from the LDraw library: 560 heads, 590 hair pieces, hats and helmets, 90 beards, capes, armour and backpacks, 1,650 torsos and 320 hips and legs, all with their original prints.
+- **Six slots always in view**: headgear, head, neck, back, torso and legs, each with its part, colour and part number. Click one to browse its parts, remove any of them with ×.
 - **Any colour** from the LDraw palette for skin, headgear, torso, arms, hands, hips and legs.
 - **Game portrait look**: starry background, blue ring with its dark inner edge, hard key light and a soft, low-res "video capture" finish. Every bit of it can be turned off or recoloured.
 - **Drag to turn, scroll to zoom**, sliders for fine tuning. Zoom out and the portrait turns into the whole figure, legs included.
 - **Export** as PNG in 256, 512 or 1024 px, with a transparent background if you want.
 - **Share links**: the whole portrait lives in the URL.
-- **Undo and redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>), slots on <kbd>1</kbd>–<kbd>4</kbd>, <kbd>Del</kbd> to remove a part.
+- **Undo and redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>), slots on <kbd>1</kbd>–<kbd>6</kbd>, <kbd>Del</kbd> to remove a part.
 - **Random** button for when you have no idea.
 - Static site, no account, no server, no tracking.
 
@@ -79,7 +85,7 @@ src/lib/
   thumbs.ts             part thumbnails
   state.svelte.ts       portrait state, share links, random figure
   history.svelte.ts     undo and redo
-  components/           Preview, Slot, PartPicker, Swatches, Thumb
+  components/           Preview, Slot, PartPicker, ColorBar, Thumb
 src/routes/+page.svelte the editor
 ```
 

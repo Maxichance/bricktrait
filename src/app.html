@@ -4,6 +4,51 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+
+		<!-- The app renders in the browser only: search engines and link previews read these static tags -->
+		<title>bricktrait · Minifigure avatar maker, build your minifig profile picture</title>
+		<meta
+			name="description"
+			content="Free LEGO® minifigure avatar maker. Build a minifig profile picture from 3,000+ real parts (heads, hair, torsos, legs, beards, capes), in the style of the classic game portraits, and download it as a PNG."
+		/>
+		<meta
+			name="keywords"
+			content="minifigure avatar maker, minifig avatar, lego avatar maker, minifig profile picture, pfp generator, avatar generator, minifig creator, ldraw"
+		/>
+		<link rel="canonical" href="https://maxichance.github.io/bricktrait/" />
+		<meta name="theme-color" content="#f3efe4" />
+
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="bricktrait" />
+		<meta property="og:title" content="bricktrait · Minifigure avatar maker" />
+		<meta
+			property="og:description"
+			content="Build your minifig profile picture from 3,000+ real parts, right in the browser. Free, no account."
+		/>
+		<meta property="og:url" content="https://maxichance.github.io/bricktrait/" />
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content="bricktrait · Minifigure avatar maker" />
+		<meta
+			name="twitter:description"
+			content="Build your minifig profile picture from 3,000+ real parts, right in the browser."
+		/>
+
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "WebApplication",
+				"name": "bricktrait",
+				"url": "https://maxichance.github.io/bricktrait/",
+				"description": "Minifigure avatar maker: build a minifig profile picture from thousands of real LDraw parts and export it as a PNG.",
+				"applicationCategory": "DesignApplication",
+				"operatingSystem": "Any",
+				"browserRequirements": "Requires WebGL",
+				"isAccessibleForFree": true,
+				"offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+				"codeRepository": "https://github.com/Maxichance/bricktrait",
+				"license": "https://opensource.org/licenses/MIT"
+			}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
