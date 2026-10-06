@@ -46,6 +46,7 @@ jobs:
       - run: npm run lint
       - run: npm run check
       - run: npm test
+      - run: npm run e2e
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}
