@@ -12,7 +12,7 @@
 	import { MIN_ZOOM } from '#lib/scene.ts';
 	import { renderer } from '#lib/render.ts';
 	import { fromHash, initial, portrait, randomize, toHash } from '#lib/state.svelte.ts';
-	import { history as timeline, redo, track, undo } from '#lib/history.svelte.ts';
+	import { history as timeline, hold, redo, release, track, undo } from '#lib/history.svelte.ts';
 	import { used } from '#lib/prefs.svelte.ts';
 	import { changeLang, i18n, LANGS, pieces, t, type Lang } from '#lib/i18n.svelte.ts';
 	import Preview from '#lib/components/Preview.svelte';
@@ -206,12 +206,32 @@
 		setTimeout(() => (copied = false), 1800);
 	}
 
+	// Dragging a slider is one undo step, however long it lasts
+	let sliding = false;
+	function sliderDown(e: PointerEvent) {
+		if ((e.target as HTMLElement).matches?.('input[type=range]')) {
+			sliding = true;
+			hold();
+		}
+	}
+	function sliderUp() {
+		if (sliding) {
+			sliding = false;
+			release();
+		}
+	}
+
 	function startOver() {
 		Object.assign(portrait, structuredClone(initial));
 	}
 </script>
 
-<svelte:window onkeydown={keydown} />
+<svelte:window
+	onkeydown={keydown}
+	onpointerdown={sliderDown}
+	onpointerup={sliderUp}
+	onpointercancel={sliderUp}
+/>
 
 <div class="app">
 	<header>

@@ -3,6 +3,7 @@
 	import { initial, portrait } from '#lib/state.svelte.ts';
 	import { MIN_ZOOM } from '#lib/scene.ts';
 	import { t } from '#lib/i18n.svelte.ts';
+	import { hold, release } from '#lib/history.svelte.ts';
 
 	const SIZE = 640;
 	const webgl = webglAvailable();
@@ -51,6 +52,8 @@
 	};
 
 	function down(e: PointerEvent) {
+		// The whole gesture is one undo step
+		if (!pointers.size) hold();
 		pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 		canvas.setPointerCapture(e.pointerId);
 		if (pointers.size === 2) pinch = spread();
@@ -70,8 +73,9 @@
 		}
 	}
 	function up(e: PointerEvent) {
-		pointers.delete(e.pointerId);
+		if (!pointers.delete(e.pointerId)) return;
 		pinch = 0;
+		if (!pointers.size) release();
 	}
 	function wheel(e: WheelEvent) {
 		e.preventDefault();

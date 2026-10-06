@@ -98,7 +98,11 @@ check('dragging the portrait turns it, as one undo step', async () => {
 	const y = box.y + box.height / 2;
 	await page.mouse.move(x, y);
 	await page.mouse.down();
-	for (let i = 1; i <= 10; i++) await page.mouse.move(x + i * 8, y);
+	// Slower than the 400 ms grouping delay, like a slow machine: still one undo step
+	for (let i = 1; i <= 5; i++) {
+		await page.mouse.move(x + i * 16, y);
+		await pause(450);
+	}
 	await page.mouse.up();
 	const turned = await view();
 	assert.ok(Math.abs(turned.yaw) > 10, `yaw is ${turned.yaw}`);
