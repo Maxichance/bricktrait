@@ -10,7 +10,8 @@
 		type Pose
 	} from '#lib/ldraw.ts';
 	import { MIN_ZOOM } from '#lib/scene.ts';
-	import { renderer } from '#lib/render.ts';
+	import { renderer, type ImageFormat } from '#lib/render.ts';
+	import { RING_PRESETS, setBackdropImage } from '#lib/compose.ts';
 	import { fromHash, initial, portrait, randomize, toHash } from '#lib/state.svelte.ts';
 	import { history as timeline, hold, redo, release, track, undo } from '#lib/history.svelte.ts';
 	import { used } from '#lib/prefs.svelte.ts';
@@ -34,7 +35,9 @@
 	];
 	// Both hands pick from the same parts
 	const catOf = (slot: SlotId) => (slot === 'handR' || slot === 'handL' ? 'hand' : slot);
-	const BACKGROUNDS = ['space', 'solid', 'none'] as const;
+	const BACKGROUNDS = ['space', 'solid', 'gradient', 'image', 'none'] as const;
+	const SIZES = [256, 512, 1024, 2048] as const;
+	const FORMATS = ['png', 'webp', 'jpeg'] as const;
 	const JOINTS = [
 		{ k: 'head', label: 'poseHead', min: -90, max: 90 },
 		{ k: 'armR', label: 'poseArmR', min: -90, max: 180 },
@@ -66,7 +69,11 @@
 	let ready = $state(false);
 	let failed = $state('');
 	let progress = $state(0);
-	let size = $state(512);
+	let size: number = $state(512);
+	let format: ImageFormat = $state('png');
+	let exportMenu: HTMLDetailsElement | undefined = $state();
+	let copiedImage = $state(false);
+	let copyError = $state(false);
 	let copied = $state(false);
 	const SETTINGS = ['camera', 'pose', 'scene'] as const;
 	let settingsTab: (typeof SETTINGS)[number] = $state('camera');
@@ -186,18 +193,49 @@
 		}
 	}
 
+	const portraitImage = () =>
+		renderer.image(size, $state.snapshot(portrait.view), $state.snapshot(portrait.style), format);
+
 	async function download() {
-		const blob = await renderer.png(
-			size,
-			$state.snapshot(portrait.view),
-			$state.snapshot(portrait.style)
-		);
+		const blob = await portraitImage();
 		if (!blob) return;
 		const a = document.createElement('a');
 		a.href = URL.createObjectURL(blob);
-		a.download = `bricktrait-${size}.png`;
+		a.download = `bricktrait-${size}.${format === 'jpeg' ? 'jpg' : format}`;
 		a.click();
 		setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+		if (exportMenu) exportMenu.open = false;
+	}
+
+	// Browsers only take PNG on the clipboard
+	async function copyImage() {
+		copyError = false;
+		try {
+			const blob = await renderer.image(
+				size,
+				$state.snapshot(portrait.view),
+				$state.snapshot(portrait.style),
+				'png'
+			);
+			if (!blob) throw new Error('no image');
+			await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+			copiedImage = true;
+			setTimeout(() => (copiedImage = false), 1800);
+		} catch {
+			copyError = true;
+		}
+	}
+
+	function importImage(e: Event) {
+		const file = (e.currentTarget as HTMLInputElement).files?.[0];
+		if (!file) return;
+		const img = new Image();
+		img.onload = () => {
+			setBackdropImage(img);
+			// Redraw with the new picture
+			portrait.style = { ...portrait.style };
+		};
+		img.src = URL.createObjectURL(file);
 	}
 
 	async function share() {
@@ -293,17 +331,46 @@
 			</div>
 
 			<div class="actions">
-				<button type="button" class="btn primary" onclick={download} disabled={!ready}>
-					{t('download')} PNG
-				</button>
-				<label>
-					<span class="sr-only">{t('size')}</span>
-					<select class="btn" bind:value={size}>
-						<option value={256}>256 px</option>
-						<option value={512}>512 px</option>
-						<option value={1024}>1024 px</option>
-					</select>
-				</label>
+				<div class="export">
+					<button type="button" class="btn primary" onclick={download} disabled={!ready}>
+						{t('download')}
+						<span class="mono">{format === 'jpeg' ? 'JPG' : format.toUpperCase()} · {size}</span>
+					</button>
+					<details class="menu" bind:this={exportMenu}>
+						<summary class="btn" title={t('exportOptions')}>
+							<span class="sr-only">{t('exportOptions')}</span>
+							<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5" /></svg>
+						</summary>
+						<div class="popover">
+							<fieldset>
+								<legend class="label">{t('size')}</legend>
+								<div class="seg">
+									{#each SIZES as s (s)}
+										<button type="button" aria-pressed={size === s} onclick={() => (size = s)}
+											>{s}</button
+										>
+									{/each}
+								</div>
+							</fieldset>
+							<fieldset>
+								<legend class="label">{t('format')}</legend>
+								<div class="seg">
+									{#each FORMATS as f (f)}
+										<button type="button" aria-pressed={format === f} onclick={() => (format = f)}
+											>{f === 'jpeg' ? 'JPG' : f.toUpperCase()}</button
+										>
+									{/each}
+								</div>
+							</fieldset>
+							<button type="button" class="btn" onclick={copyImage} disabled={!ready}>
+								{copiedImage ? t('imageCopied') : t('copyImage')}
+							</button>
+							{#if copyError}
+								<p class="muted">{t('copyFailed')}</p>
+							{/if}
+						</div>
+					</details>
+				</div>
 				<button
 					type="button"
 					class="btn icon"
@@ -400,7 +467,7 @@
 						{/each}
 					</div>
 				{:else}
-					<div class="seg" role="group" aria-label={t('background')}>
+					<div class="seg wrap" role="group" aria-label={t('background')}>
 						{#each BACKGROUNDS as b (b)}
 							<button
 								type="button"
@@ -411,27 +478,77 @@
 						{/each}
 					</div>
 					<div class="row">
-						{#if portrait.style.background !== 'none'}
+						{#if portrait.style.background === 'space'}
 							<label class="color">
 								<input type="color" bind:value={portrait.style.backdrop} />
-								<span>{portrait.style.background === 'space' ? t('disc') : t('fill')}</span>
+								<span>{t('disc')}</span>
+							</label>
+						{:else if portrait.style.background === 'solid'}
+							<label class="color">
+								<input type="color" bind:value={portrait.style.backdrop} />
+								<span>{t('fill')}</span>
+							</label>
+						{:else if portrait.style.background === 'gradient'}
+							<label class="color">
+								<input type="color" bind:value={portrait.style.backdrop} />
+								<span>{t('top')}</span>
+							</label>
+							<label class="color">
+								<input type="color" bind:value={portrait.style.backdrop2} />
+								<span>{t('bottom')}</span>
+							</label>
+						{:else if portrait.style.background === 'image'}
+							<label class="btn small upload">
+								{t('importImage')}
+								<input type="file" accept="image/*" onchange={importImage} />
 							</label>
 						{/if}
-						<label class="color" class:off={!portrait.style.ring}>
-							<input
-								type="color"
-								bind:value={portrait.style.ringColor}
-								disabled={!portrait.style.ring}
-							/>
-							<span>{t('ring')}</span>
-						</label>
+					</div>
+					{#if portrait.style.background === 'image'}
+						<p class="muted">{t('imageNote')}</p>
+					{/if}
+
+					<div class="row">
 						<label class="check">
 							<input type="checkbox" bind:checked={portrait.style.ring} />
 							<span>{t('showRing')}</span>
 						</label>
+						{#if portrait.style.ring}
+							<div class="rings" role="group" aria-label={t('ringPreset')}>
+								{#each RING_PRESETS as c (c)}
+									<button
+										type="button"
+										class="ringdot"
+										style:--c={c}
+										aria-label={c}
+										aria-pressed={portrait.style.ringColor === c}
+										onclick={() => (portrait.style.ringColor = c)}
+									></button>
+								{/each}
+								<label class="color" title={t('ringPreset')}>
+									<input type="color" bind:value={portrait.style.ringColor} />
+								</label>
+							</div>
+						{:else}
+							<div class="seg small" role="group" aria-label={t('shape')}>
+								{#each ['round', 'square'] as const as sh (sh)}
+									<button
+										type="button"
+										aria-pressed={portrait.style.shape === sh}
+										onclick={() => (portrait.style.shape = sh)}>{t(sh)}</button
+									>
+								{/each}
+							</div>
+						{/if}
+					</div>
+					<div class="row">
 						<label class="check">
 							<input type="checkbox" bind:checked={portrait.style.retro} />
 							<span>{t('retro')}</span>
+						</label>
+						<label class="check">
+							<input type="checkbox" bind:checked={portrait.style.outline} />
+							<span>{t('outline')}</span>
 						</label>
 					</div>
 				{/if}
@@ -609,7 +726,7 @@
 
 	.actions {
 		display: grid;
-		grid-template-columns: 1fr auto auto auto;
+		grid-template-columns: 1fr auto auto;
 		align-items: center;
 		gap: 8px;
 		margin-top: 12px;
@@ -617,6 +734,68 @@
 	.actions .btn {
 		justify-content: center;
 		padding: 0 12px;
+	}
+	/* Download, with its options in a small menu on the side */
+	.export {
+		position: relative;
+		display: flex;
+		min-width: 0;
+	}
+	.export > .primary {
+		flex: 1;
+		border-top-right-radius: 0;
+		border-bottom-right-radius: 0;
+	}
+	.export .primary .mono {
+		opacity: 0.7;
+		font-weight: 500;
+	}
+	.menu summary {
+		list-style: none;
+		width: 34px;
+		padding: 0;
+		justify-content: center;
+		border-left: 0;
+		border-top-left-radius: 0;
+		border-bottom-left-radius: 0;
+		background: var(--yellow);
+		box-shadow: 3px 3px 0 var(--ink);
+		cursor: pointer;
+	}
+	.menu summary::-webkit-details-marker {
+		display: none;
+	}
+	.menu summary svg {
+		width: 16px;
+		height: 16px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+	.popover {
+		position: absolute;
+		top: calc(100% + 8px);
+		left: 0;
+		right: 0;
+		z-index: 5;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 14px;
+		background: var(--card);
+		border: 1.5px solid var(--ink);
+		border-radius: var(--radius);
+		box-shadow: 4px 4px 0 var(--ink);
+	}
+	.popover fieldset {
+		border: 0;
+		margin: 0;
+		padding: 0;
+	}
+	.popover legend {
+		margin-bottom: 6px;
 	}
 	.actions .icon {
 		width: 38px;
@@ -634,9 +813,6 @@
 	.icon circle {
 		fill: currentColor;
 		stroke: none;
-	}
-	select.btn {
-		padding-right: 8px;
 	}
 	.settings {
 		margin-top: 16px;
@@ -716,6 +892,42 @@
 	.seg button + button {
 		border-left: 1.5px solid var(--ink);
 	}
+	.seg.small button {
+		height: 28px;
+		padding: 0 12px;
+	}
+	.seg.wrap button {
+		padding: 0 4px;
+		font-size: 0.8rem;
+	}
+	.rings {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.ringdot {
+		width: 22px;
+		height: 22px;
+		padding: 0;
+		border: 4px solid var(--c);
+		border-radius: 50%;
+		background: #0b0b14;
+	}
+	.ringdot[aria-pressed='true'] {
+		box-shadow:
+			0 0 0 2px var(--paper),
+			0 0 0 3.5px var(--ink);
+	}
+	.upload {
+		position: relative;
+		cursor: pointer;
+	}
+	.upload input {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		cursor: pointer;
+	}
 	.seg button[aria-pressed='true'] {
 		background: var(--ink);
 		color: var(--paper);
@@ -733,9 +945,6 @@
 		align-items: center;
 		gap: 6px;
 		cursor: pointer;
-	}
-	.color.off {
-		opacity: 0.4;
 	}
 	input[type='color'] {
 		width: 28px;

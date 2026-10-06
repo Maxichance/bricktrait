@@ -99,7 +99,23 @@ const en = {
 	presetWalk: 'Walk',
 	presetSit: 'Sit',
 	presetCheer: 'Cheer',
-	ownArms: 'This torso has its own arms: they cannot move.'
+	ownArms: 'This torso has its own arms: they cannot move.',
+	gradient: 'Gradient',
+	image: 'Image',
+	top: 'Top',
+	bottom: 'Bottom',
+	importImage: 'Import an image',
+	imageNote: 'Imported images stay on your device and are not part of share links.',
+	shape: 'Shape',
+	round: 'Round',
+	square: 'Square',
+	outline: 'Sticker outline',
+	format: 'Format',
+	copyImage: 'Copy image',
+	imageCopied: 'Image copied',
+	copyFailed: 'Copy is not allowed here, use Download.',
+	exportOptions: 'Export options',
+	ringPreset: 'Ring colour'
 };
 
 type Key = keyof typeof en;
@@ -195,7 +211,24 @@ const fr: Record<Key, string> = {
 	presetWalk: 'Marche',
 	presetSit: 'Assis',
 	presetCheer: 'Victoire',
-	ownArms: 'Ce torse a ses propres bras : ils ne bougent pas.'
+	ownArms: 'Ce torse a ses propres bras : ils ne bougent pas.',
+	gradient: 'Dégradé',
+	image: 'Image',
+	top: 'Haut',
+	bottom: 'Bas',
+	importImage: 'Importer une image',
+	imageNote:
+		'Les images importées restent sur votre appareil et ne sont pas dans les liens partagés.',
+	shape: 'Forme',
+	round: 'Ronde',
+	square: 'Carrée',
+	outline: 'Contour autocollant',
+	format: 'Format',
+	copyImage: "Copier l'image",
+	imageCopied: 'Image copiée',
+	copyFailed: 'Copie impossible ici, utilisez Télécharger.',
+	exportOptions: "Options d'export",
+	ringPreset: "Couleur de l'anneau"
 };
 
 // Filter groups and themes, as found in the catalogue

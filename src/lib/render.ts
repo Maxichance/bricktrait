@@ -7,6 +7,8 @@ import { compose, type Style } from './compose';
 // Retro mode renders at about a third of the size and lets the upscale soften it
 const RETRO_SCALE = 0.3;
 
+export type ImageFormat = 'png' | 'webp' | 'jpeg';
+
 class PortraitRenderer {
 	private stage: Stage | null = null;
 	private focus: Box3 | null = null;
@@ -41,10 +43,20 @@ class PortraitRenderer {
 		compose(out, figure, size, style);
 	}
 
-	async png(size: number, view: View, style: Style) {
+	/** The portrait as an image file. JPEG has no transparency: it gets a white background. */
+	async image(size: number, view: View, style: Style, format: ImageFormat = 'png') {
 		const canvas = document.createElement('canvas');
 		this.draw(canvas, size, view, style);
-		return new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'));
+		let out = canvas;
+		if (format === 'jpeg') {
+			out = document.createElement('canvas');
+			out.width = out.height = size;
+			const ctx = out.getContext('2d')!;
+			ctx.fillStyle = '#fff';
+			ctx.fillRect(0, 0, size, size);
+			ctx.drawImage(canvas, 0, 0);
+		}
+		return new Promise<Blob | null>((r) => out.toBlob(r, `image/${format}`, 0.92));
 	}
 }
 

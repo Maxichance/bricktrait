@@ -1,12 +1,19 @@
 // 2D compositing of the final picture: background, figure, ring.
 
 export interface Style {
-	/** space: stars around a glowing disc, solid: flat colour, none: transparent */
-	background: 'space' | 'solid' | 'none';
-	/** disc colour for space, fill colour for solid */
+	/**
+	 * space: stars around a glowing disc · solid: flat colour · gradient: from
+	 * `backdrop` (top) to `backdrop2` · image: a picture the visitor imported · none: transparent
+	 */
+	background: 'space' | 'solid' | 'gradient' | 'image' | 'none';
 	backdrop: string;
+	backdrop2: string;
 	ring: boolean;
 	ringColor: string;
+	/** without a ring: round or square picture */
+	shape: 'round' | 'square';
+	/** thick white outline around the figure, sticker style */
+	outline: boolean;
 	/** low resolution, softened render */
 	retro: boolean;
 }
@@ -14,16 +21,26 @@ export interface Style {
 export const defaultStyle: Style = {
 	background: 'space',
 	backdrop: '#262a72',
+	backdrop2: '#0d0f2b',
 	ring: true,
 	ringColor: '#1f5ef5',
+	shape: 'round',
+	outline: false,
 	retro: true
 };
+
+/** Ring colours of the classic character select screens */
+export const RING_PRESETS = ['#1f5ef5', '#d6232c', '#e0a800', '#2e9e4f', '#9aa3ad', '#7b3fbf'];
 
 // Ring geometry, relative to the picture size, measured on the game portraits
 const RING_OUTER = 0.485;
 const RING_WIDTH = 0.062;
 // Thick black band between the blue ring and the disc
 const RING_INNER_EDGE = 0.04;
+
+// Imported backdrop: kept in memory only, it is not part of share links
+let backdropImage: CanvasImageSource | null = null;
+export const setBackdropImage = (image: CanvasImageSource | null) => (backdropImage = image);
 
 export function compose(
 	out: HTMLCanvasElement,
@@ -34,38 +51,27 @@ export function compose(
 	out.width = out.height = size;
 	const ctx = out.getContext('2d')!;
 	const c = size / 2;
-	const disc = (RING_OUTER - RING_WIDTH - (style.ring ? RING_INNER_EDGE : 0)) * size;
-	const round = style.ring || style.background === 'space';
+	const round = style.ring || style.shape === 'round';
+	const disc = round ? (RING_OUTER - RING_WIDTH - (style.ring ? RING_INNER_EDGE : 0)) * size : c;
 	ctx.clearRect(0, 0, size, size);
 
-	if (style.background === 'space') {
+	// Outside the disc: the starry sky of the space background
+	if (style.background === 'space' && round) {
 		ctx.fillStyle = '#020207';
 		ctx.fillRect(0, 0, size, size);
 		stars(ctx, size);
 	}
 
-	// Disc behind the figure
 	ctx.save();
 	if (round) {
 		ctx.beginPath();
 		ctx.arc(c, c, disc + 1, 0, Math.PI * 2);
 		ctx.clip();
 	}
-	if (style.background === 'space') {
-		// Lighter towards the top centre, darker at the bottom and edges
-		const g = ctx.createRadialGradient(c, c - disc * 0.55, 0, c, c - disc * 0.2, disc * 1.25);
-		g.addColorStop(0, shade(style.backdrop, 0.22));
-		g.addColorStop(0.55, style.backdrop);
-		g.addColorStop(1, shade(style.backdrop, -0.55));
-		ctx.fillStyle = g;
-		ctx.fillRect(0, 0, size, size);
-		stars(ctx, size, 0.3);
-	} else if (style.background === 'solid') {
-		ctx.fillStyle = style.backdrop;
-		ctx.fillRect(0, 0, size, size);
-	}
+	backdrop(ctx, size, c, disc, style);
 	ctx.imageSmoothingEnabled = true;
 	ctx.imageSmoothingQuality = 'high';
+	if (style.outline) outline(ctx, figure, size);
 	// Retro: the low resolution render is upscaled, a slight blur hides the pixels
 	if (style.retro) ctx.filter = `blur(${(size / 512) * 0.3}px)`;
 	ctx.drawImage(figure, 0, 0, size, size);
@@ -74,6 +80,71 @@ export function compose(
 
 	if (style.ring) ring(ctx, c, size, style.ringColor);
 	if (style.retro) capture(out, ctx, size);
+}
+
+function backdrop(
+	ctx: CanvasRenderingContext2D,
+	size: number,
+	c: number,
+	disc: number,
+	style: Style
+) {
+	switch (style.background) {
+		case 'space': {
+			// Lighter towards the top centre, darker at the bottom and edges
+			const g = ctx.createRadialGradient(c, c - disc * 0.55, 0, c, c - disc * 0.2, disc * 1.25);
+			g.addColorStop(0, shade(style.backdrop, 0.22));
+			g.addColorStop(0.55, style.backdrop);
+			g.addColorStop(1, shade(style.backdrop, -0.55));
+			ctx.fillStyle = g;
+			ctx.fillRect(0, 0, size, size);
+			stars(ctx, size, 0.3);
+			break;
+		}
+		case 'solid':
+			ctx.fillStyle = style.backdrop;
+			ctx.fillRect(0, 0, size, size);
+			break;
+		case 'gradient': {
+			const g = ctx.createLinearGradient(0, 0, 0, size);
+			g.addColorStop(0, style.backdrop);
+			g.addColorStop(1, style.backdrop2);
+			ctx.fillStyle = g;
+			ctx.fillRect(0, 0, size, size);
+			break;
+		}
+		case 'image':
+			if (backdropImage) cover(ctx, backdropImage, size);
+			else {
+				ctx.fillStyle = style.backdrop;
+				ctx.fillRect(0, 0, size, size);
+			}
+			break;
+	}
+}
+
+/** Draws an image filling the square, cropped to keep its proportions */
+function cover(ctx: CanvasRenderingContext2D, image: CanvasImageSource, size: number) {
+	const w = (image as HTMLImageElement).naturalWidth || (image as HTMLCanvasElement).width;
+	const h = (image as HTMLImageElement).naturalHeight || (image as HTMLCanvasElement).height;
+	const s = Math.max(size / w, size / h);
+	ctx.drawImage(image, (size - w * s) / 2, (size - h * s) / 2, w * s, h * s);
+}
+
+/** White silhouette, grown in every direction, under the figure */
+function outline(ctx: CanvasRenderingContext2D, figure: CanvasImageSource, size: number) {
+	const mask = document.createElement('canvas');
+	mask.width = mask.height = size;
+	const m = mask.getContext('2d')!;
+	m.drawImage(figure, 0, 0, size, size);
+	m.globalCompositeOperation = 'source-in';
+	m.fillStyle = '#fff';
+	m.fillRect(0, 0, size, size);
+	const r = size * 0.018;
+	for (let a = 0; a < 16; a++) {
+		const t = (a / 16) * Math.PI * 2;
+		ctx.drawImage(mask, Math.cos(t) * r, Math.sin(t) * r);
+	}
 }
 
 // The reference portraits are video captures: soft all over, a little washed out
@@ -100,7 +171,7 @@ function ring(ctx: CanvasRenderingContext2D, c: number, size: number, color: str
 	ctx.beginPath();
 	ctx.arc(c, c, outer - w - edge / 2, 0, Math.PI * 2);
 	ctx.stroke();
-	// Flat blue band
+	// Flat coloured band
 	ctx.lineWidth = w;
 	ctx.strokeStyle = color;
 	ctx.beginPath();
