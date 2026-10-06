@@ -462,8 +462,21 @@
 	}
 	@media (max-width: 520px) {
 		.grid {
-			grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+			grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
 			gap: 6px;
+		}
+		.pick {
+			padding: 6px 3px 6px;
+		}
+		.pick :global(.thumb) {
+			width: 90%;
+		}
+		.name {
+			font-size: 0.68rem;
+		}
+		/* The part number stays in the tooltip */
+		.id {
+			display: none;
 		}
 		.search {
 			min-width: 100%;

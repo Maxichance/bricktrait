@@ -169,7 +169,74 @@ check('arrow keys move through the grid, Enter picks', async () => {
 	assert.notEqual(fig.head.id, '3626cp01');
 });
 
+check('the Pose tab moves an arm, its value button puts it back', async () => {
+	await page.click('.modes [role=tab]:nth-child(2)');
+	await page.waitForSelector('.group input[type=range]');
+	// Arms group: right arm
+	await page.$$eval('.group', (groups) => {
+		const input = groups[1].querySelector('input[type=range]');
+		input.value = '60';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+	});
+	assert.equal((await state()).pose.armR, 60);
+	await page.$$eval('.group', (groups) => groups[1].querySelector('.val').click());
+	assert.equal((await state()).pose.armR, 0);
+});
+
+check('arrow keys move between the tabs', async () => {
+	await page.focus('.modes [role=tab][aria-selected=true]');
+	await page.keyboard.press('ArrowRight');
+	await pause(100);
+	const tab = await page.evaluate(() => document.activeElement?.textContent?.trim());
+	assert.equal(tab, 'Camera');
+	await page.keyboard.press('Home');
+	await pause(100);
+	assert.ok(await page.$('.picker'));
+});
+
+check('/ jumps to the parts search', async () => {
+	await page.click('.modes [role=tab]:nth-child(4)');
+	await page.evaluate(() => document.activeElement?.blur?.());
+	await key('/');
+	await pause(200);
+	const focused = await page.evaluate(() => document.activeElement?.type);
+	assert.equal(focused, 'search');
+	await page.evaluate(() => document.activeElement?.blur?.());
+});
+
+check('the full palette unfolds and finds a colour by name', async () => {
+	await page.click('.bar .more');
+	await page.type('.palette input[type=search]', 'dark red');
+	await pause(200);
+	const found = await page.$$eval('.palette .swatch', (s) => s.map((b) => b.title));
+	assert.ok(found.length > 0 && found.every((t) => /dark red/i.test(t)), found.join());
+	await page.click('.palette .swatch');
+	assert.match(found[0], new RegExp(`\\(${(await state()).head.color}\\)`));
+	await page.click('.bar .more');
+	assert.ok(await page.$('.bar .strip'));
+	await key('z', ['Control']);
+});
+
+check('on a phone the tabs stay in reach and nothing overflows', async () => {
+	const phone = await browser.newPage();
+	await phone.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+	await phone.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
+	await phone.waitForSelector('.picker .item', { timeout: 60000 });
+	await phone.evaluate(() => window.scrollTo(0, 2000));
+	await pause(500);
+	const tabs = await (await phone.$('.modes')).boundingBox();
+	const slots = await (await phone.$('.slots')).boundingBox();
+	assert.ok(tabs.y >= 0 && tabs.y < 400, `tabs at ${tabs.y}`);
+	assert.ok(slots.y > tabs.y && slots.y < 460, `slots at ${slots.y}`);
+	await phone.tap('.modes [role=tab]:nth-child(4)');
+	await phone.waitForSelector('.group .seg');
+	const width = await phone.evaluate(() => document.documentElement.scrollWidth);
+	await phone.close();
+	assert.ok(width <= 390, `page is ${width}px wide`);
+});
+
 check('the interface switches to French', async () => {
+	await page.click('.modes [role=tab]:nth-child(1)');
 	await page.select('.lang select', 'fr');
 	await pause(200);
 	const label = await page.$eval('.slot .label', (l) => l.textContent);

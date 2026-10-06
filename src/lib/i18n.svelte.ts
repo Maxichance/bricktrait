@@ -131,7 +131,11 @@ const en = {
 	left: 'Left',
 	editing: 'Editing',
 	poseRaise: 'Raise arms sideways',
-	poseSpread: 'Spread legs'
+	poseSpread: 'Spread legs',
+	fewerColours: 'Fewer',
+	findColour: 'Colour name or number',
+	onFigure: 'Already on the figure',
+	keyboard: 'Keyboard shortcuts'
 };
 
 type Key = keyof typeof en;
@@ -260,7 +264,11 @@ const fr: Record<Key, string> = {
 	left: 'Gauche',
 	editing: 'Modification',
 	poseRaise: 'Lever les bras sur le côté',
-	poseSpread: 'Écarter les jambes'
+	poseSpread: 'Écarter les jambes',
+	fewerColours: 'Moins',
+	findColour: 'Nom ou numéro de couleur',
+	onFigure: 'Déjà sur la figurine',
+	keyboard: 'Raccourcis clavier'
 };
 
 // Filter groups and themes, as found in the catalogue

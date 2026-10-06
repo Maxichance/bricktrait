@@ -25,76 +25,22 @@ bricktrait is a **LEGO® minifigure avatar maker** and **pfp generator** for Git
 
 ## Features
 
-- **3,000+ real parts** from the LDraw library: 560 heads, 590 hair pieces, hats and helmets, 90 beards, capes, armour and backpacks, 1,650 torsos and 320 hips and legs, all with their original prints.
-- **Six slots always in view**: headgear, head, neck, back, torso and legs, each with its part, colour and part number. Click one to browse its parts, remove any of them with ×.
-- **Any colour** from the LDraw palette for skin, headgear, torso, arms, hands, hips and legs.
-- **Game portrait look**: starry background, blue ring with its dark inner edge, hard key light and a soft, low-res "video capture" finish. Every bit of it can be turned off or recoloured.
-- **Drag to turn, scroll to zoom**, sliders for fine tuning. Zoom out and the portrait turns into the whole figure, legs included.
-- **Export** as PNG in 256, 512 or 1024 px, with a transparent background if you want.
+- **3,000+ real parts** from the LDraw library: 560 heads, 590 hair pieces, hats and helmets, beards, capes, armour and backpacks, 1,650 torsos, 320 hips and legs, and 650 things to hold, all with their original prints.
+- **Eight slots**: headgear, head, neck, back, torso, legs and one accessory in each hand. Pick a slot, browse its parts by name, theme or type, keep favourites, find recent ones.
+- **Any colour** from the LDraw palette for skin, headgear, torso, arms, hands, hips, legs and accessories. Colours already on the figure come first, so matching is one click.
+- **Pose the figure**: head, arms, wrists and legs, on every torso and every pair of legs, plus presets (wave, walk, sit, cheer). Advanced settings go further than a real minifig: raise the arms sideways, spread the legs.
+- **Game portrait look**: starry background, coloured ring with its dark inner edge, hard key light and a soft, low-res "video capture" finish. Or a flat colour, a gradient, your own picture, a transparent background, a square or a sticker outline.
+- **Drag to turn, scroll or pinch to zoom.** Zoom out and the portrait turns into the whole figure, legs included.
+- **Export** as PNG, WebP or JPG from 256 to 2048 px, or copy the image straight to the clipboard.
 - **Share links**: the whole portrait lives in the URL.
-- **Undo and redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>), slots on <kbd>1</kbd>–<kbd>6</kbd>, <kbd>Del</kbd> to remove a part.
+- **Works on a phone**: the portrait stays on screen while you browse the parts.
+- **Keyboard friendly**: <kbd>1</kbd>–<kbd>8</kbd> for the slots, <kbd>/</kbd> to search, <kbd>Del</kbd> to remove a part, <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo.
 - **Random** button for when you have no idea.
-- Static site, no account, no server, no tracking.
+- No account, no install, no tracking: it all runs in your browser.
 
 ## How it works
 
-```
-LDraw parts library ──► scripts/build-parts.mjs ──► static/ldraw/ ──► LDrawLoader ──► WebGL ──► 2D compositing ──► PNG
-```
-
-1. `scripts/fetch-ldraw.mjs` downloads the official [LDraw parts library](https://library.ldraw.org).
-2. `scripts/build-parts.mjs` picks the minifig heads, headgear, torsos and legs, drops the few that rely on textures (not supported by three.js), and resolves every sub-file they need. Files shared by many parts go into one `core.ldr` loaded once, files shared by a few are served individually, and each part gets a small pack with what is its own (about 32 kB on average).
-3. `scripts/build-thumbs.mjs` renders a WebP thumbnail of every part with the app's own code, in a headless Chrome, so the catalogue shows up at once. Other colours are rendered live.
-4. In the browser, three.js' [`LDrawLoader`](https://threejs.org/docs/#examples/en/loaders/LDrawLoader) parses the packs and the parts are assembled with the standard minifig offsets from the LDraw torso shortcuts.
-5. The figure is rendered on a transparent canvas, then composited in 2D with the background, the ring and the retro filter.
-
-## Getting started
-
-Requires Node.js 22 or newer.
-
-```sh
-git clone https://github.com/Maxichance/bricktrait.git
-cd bricktrait
-npm ci
-npm run parts   # downloads LDraw (~150 MB) into .ldraw/ and builds static/ldraw/
-npm run thumbs  # optional: pre-renders the thumbnails (needs Chrome, a few minutes)
-npm run dev
-```
-
-`npm run parts` only downloads the library once. Set `LDRAW_DIR` to use a copy you already have.
-
-| Command           | What it does                                             |
-| ----------------- | -------------------------------------------------------- |
-| `npm run dev`     | Development server                                       |
-| `npm run parts`   | Fetch LDraw and generate the parts                       |
-| `npm run thumbs`  | Pre-render the part thumbnails (`CHROME_PATH` if needed) |
-| `npm run build`   | Static build in `build/` (`BASE_PATH` for a subfolder)   |
-| `npm run preview` | Serve the build locally                                  |
-| `npm run check`   | Type check                                               |
-| `npm run lint`    | Prettier check                                           |
-| `npm test`        | Unit tests (Vitest)                                      |
-| `npm run format`  | Prettier                                                 |
-
-## Project structure
-
-```
-scripts/
-  fetch-ldraw.mjs       download the LDraw library
-  build-parts.mjs       select, pack and credit the parts
-  build-thumbs.mjs      pre-render the thumbnails (driving scripts/thumbs/)
-src/lib/
-  ldraw.ts              part loading and minifig assembly
-  scene.ts              three.js stage: lights, camera, framing
-  compose.ts            background, ring and retro filter
-  render.ts             portrait to pixels
-  thumbs.ts             part thumbnails
-  state.svelte.ts       portrait state, share links, random figure
-  history.svelte.ts     undo and redo
-  components/           Preview, Slot, PartPicker, ColorBar, Thumb
-src/routes/+page.svelte the editor
-```
-
-Deployment to GitHub Pages is handled by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) on every push to `main`.
+Every part is a real model from the [LDraw parts library](https://library.ldraw.org), assembled with the standard minifig offsets, drawn in 3D with [three.js](https://threejs.org) right in your browser, then composited in 2D with the background, the ring and the retro filter.
 
 ## Credits and licences
 

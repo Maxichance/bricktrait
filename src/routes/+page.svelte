@@ -104,6 +104,19 @@
 	const colorOf = (code: number) => colors.find((c) => c.code === code);
 	const torso = $derived(find(portrait.figure.torso.id));
 
+	// Colours already worn, offered first so parts can match
+	const usedColours = $derived.by(() => {
+		const f = portrait.figure;
+		const list: number[] = [];
+		if (f.head.id) list.push(f.head.color);
+		if (f.headgear.id) list.push(f.headgear.color);
+		if (f.torso.id) list.push(f.torso.color, ...(torso?.arms ? [] : [f.torso.arms, f.torso.hands]));
+		if (f.legs.id) list.push(f.legs.color);
+		if (f.legs.id === STANDARD_LEGS || hipsOnly(find(f.legs.id))) list.push(f.legs.hips);
+		for (const s of [f.neck, f.back, f.handR, f.handL]) if (s.id) list.push(s.color);
+		return list;
+	});
+
 	// What the colour bar edits for the active slot
 	const targets = $derived.by(() => {
 		const f = portrait.figure;
@@ -196,6 +209,13 @@
 		} else if (!mod && !typing && (e.key === 'Delete' || e.key === 'Backspace')) {
 			e.preventDefault();
 			remove(active);
+		} else if (e.key === '/' && !mod && !typing) {
+			// Straight to the parts search
+			e.preventDefault();
+			mode = 'parts';
+			requestAnimationFrame(() =>
+				document.querySelector<HTMLInputElement>('.picker input[type=search]')?.focus()
+			);
 		} else if (!mod && !typing && !e.altKey) {
 			const slot = SLOTS.find((s) => s.key === e.key);
 			if (slot) {
@@ -281,6 +301,26 @@
 			Object.assign(portrait, shared);
 	}
 
+	// Phone: the portrait gets smaller once the catalogue is scrolled, with
+	// some slack so it does not flicker around the threshold
+	let compact = $state(false);
+	function shrink() {
+		if (!compact && scrollY > 240) compact = true;
+		else if (compact && scrollY < 40) compact = false;
+	}
+
+	// Tabs: arrow keys go to the next or previous one
+	function tabKeys(e: KeyboardEvent) {
+		const step = { ArrowRight: 1, ArrowLeft: -1, Home: -Infinity, End: Infinity }[e.key];
+		if (step === undefined) return;
+		e.preventDefault();
+		const i = Math.min(MODES.length - 1, Math.max(0, MODES.indexOf(mode) + step));
+		mode = MODES[i];
+		requestAnimationFrame(() =>
+			document.querySelectorAll<HTMLElement>('.modes [role=tab]')[i]?.focus()
+		);
+	}
+
 	function resetView() {
 		portrait.view = { ...initial.view };
 	}
@@ -296,6 +336,7 @@
 	onpointerdown={sliderDown}
 	onpointerup={sliderUp}
 	onpointercancel={sliderUp}
+	onscroll={shrink}
 />
 
 {#snippet icon(name: string)}
@@ -416,7 +457,7 @@
 		</nav>
 	</header>
 
-	<main>
+	<main class:compact>
 		<section class="stage" aria-label={t('preview')}>
 			<div class="view">
 				<Preview />
@@ -489,9 +530,16 @@
 		</section>
 
 		<section class="panel">
-			<div class="modes" role="tablist" aria-label={t('editing')}>
+			<!-- svelte-ignore a11y_interactive_supports_focus -->
+			<div class="modes" role="tablist" aria-label={t('editing')} onkeydown={tabKeys}>
 				{#each MODES as m (m)}
-					<button type="button" role="tab" aria-selected={mode === m} onclick={() => (mode = m)}>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={mode === m}
+						tabindex={mode === m ? 0 : -1}
+						onclick={() => (mode = m)}
+					>
 						{@render icon(m)}<span>{t(m)}</span>
 					</button>
 				{/each}
@@ -553,7 +601,7 @@
 								{/if}
 							</div>
 							<div class="colors">
-								<ColorBar {targets} {colors} />
+								<ColorBar {targets} {colors} used={usedColours} />
 								{#if active === 'handR' || active === 'handL'}
 									{@const hand = portrait.figure[active]}
 									<label class="range spin">
@@ -1480,6 +1528,16 @@
 		}
 		.body {
 			padding: 14px 0 0;
+		}
+		/* Scrolled down: a smaller portrait, the download button only */
+		main.compact {
+			--sv: min(30vw, 19dvh, 170px);
+		}
+		main.compact .float {
+			display: none;
+		}
+		main.compact .export > .primary {
+			height: 52px;
 		}
 		.preset {
 			height: 32px;
