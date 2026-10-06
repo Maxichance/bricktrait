@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { placements, shortName, STANDARD_LEGS, STANDING, type Figure, type Part } from './ldraw';
+import {
+	placements,
+	shortName,
+	STANDARD_LEGS,
+	STANDING,
+	type Figure,
+	type Part,
+	type Placement
+} from './ldraw';
 
 const figure = (): Figure => ({
 	head: { id: '3626cp01', color: 14 },
@@ -102,6 +110,72 @@ describe('minifig assembly', () => {
 		expect(raised.filter((p) => p.id === '3820')[1].at).toEqual(
 			rest.filter((p) => p.id === '3820')[1].at
 		);
+	});
+
+	it('moves the arms of torsos that come with their own', () => {
+		const torso: Part = { id: '76382p01', name: 'Torso with Arms', cat: 'torso', arms: true };
+		const f = figure();
+		f.torso.id = torso.id;
+		f.pose.armR = 60;
+		const rig = placements(f, torso)[0].rig!;
+		// What the 76382p01 shortcut is made of
+		const parts: Placement[] = [
+			{ id: '973p01', color: 15, at: [0, 0, 0] },
+			{ id: '3818', color: 15, at: [-15.552, 9, 0], m: [0.985, -0.17, 0, 0.17, 0.985, 0, 0, 0, 1] },
+			{ id: '3819', color: 15, at: [15.552, 9, 0], m: [0.985, 0.17, 0, -0.17, 0.985, 0, 0, 0, 1] },
+			{ id: '3820', color: 14, at: [-23.69, 26.774, -9.898], m: [1, 0, 0, 0, 1, 0, 0, 0, 1] },
+			{ id: '3820', color: 14, at: [23.69, 26.774, -9.898], m: [1, 0, 0, 0, 1, 0, 0, 0, 1] }
+		];
+		const moved = rig(parts)!;
+		// The torso and the shoulder stay, the right hand goes up, the left one stays
+		expect(moved[0]).toEqual(parts[0]);
+		expect(moved[1].at![1]).toBeCloseTo(9, 3);
+		expect(moved[1].m).not.toEqual(parts[1].m);
+		expect(moved[3].at![1]).toBeLessThan(parts[3].at![1] - 5);
+		expect(moved[4].at![1]).toBeCloseTo(parts[4].at![1], 1);
+	});
+
+	it('moves the legs of hips and legs shortcuts, right one first', () => {
+		const legs: Part = { id: '87857', name: 'Hips and Legs Long', cat: 'legs' };
+		const f = figure();
+		f.legs.id = legs.id;
+		f.pose.legR = 45;
+		const placed = placements(f, undefined, undefined, legs).find((p) => p.id === '87857')!;
+		const moved = placed.rig!([
+			{ id: '3815b', color: 1, at: [0, 32, 0] },
+			{ id: '87775', color: 1, at: [0, 44, 0] },
+			{ id: '87776', color: 1, at: [0, 44, 0] }
+		])!;
+		expect(moved[0].at).toEqual([0, 32, 0]);
+		expect(moved[1].m).not.toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+		expect(moved[2].m!.map((v) => Math.round(v * 1e6) / 1e6)).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+	});
+
+	it('puts standard legs under hips that come alone', () => {
+		const hips: Part = { id: '3815bpx2', name: 'Hips with Belt Pattern', cat: 'legs' };
+		const f = figure();
+		f.legs = { id: hips.id, color: 1, hips: 0 };
+		const list = placements(f, undefined, undefined, hips);
+		expect(ids(list)).toEqual(expect.arrayContaining(['3815bpx2', '3816', '3817']));
+		expect(list.find((p) => p.id === '3815bpx2')!.color).toBe(0);
+		const tail: Part = { id: '87749', name: 'Hips with Tentacles', cat: 'legs' };
+		f.legs.id = tail.id;
+		expect(ids(placements(f, undefined, undefined, tail))).not.toContain('3816');
+	});
+
+	it('raises arms and spreads legs sideways', () => {
+		const f = figure();
+		const rest = placements(f);
+		f.pose.raiseR = 90;
+		f.pose.spreadL = 45;
+		const out = placements(f);
+		const hand = (l: typeof rest) => l.filter((p) => p.id === '3820')[0].at!;
+		// The right hand goes outwards (-x) and up (-y)
+		expect(hand(out)[0]).toBeLessThan(hand(rest)[0] - 5);
+		expect(hand(out)[1]).toBeLessThan(hand(rest)[1] - 10);
+		// The left leg turns outwards
+		const leg = out.find((p) => p.id === '3817')!;
+		expect(leg.m![3]).toBeLessThan(0);
 	});
 
 	it('leaves out empty slots', () => {

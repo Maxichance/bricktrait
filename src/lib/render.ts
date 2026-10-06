@@ -24,7 +24,7 @@ class PortraitRenderer {
 		await library.init();
 		const find = (id: string | null) => library.catalog.find((p) => p.id === id);
 		const model = await library.build(
-			placements(figure, find(figure.torso.id), find(figure.head.id))
+			placements(figure, find(figure.torso.id), find(figure.head.id), find(figure.legs.id))
 		);
 		if (version !== this.version) return false;
 		this.stage ??= new Stage();

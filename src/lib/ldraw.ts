@@ -35,6 +35,12 @@ export interface Placement {
 	at?: [number, number, number];
 	/** 3x3 rotation matrix, row major */
 	m?: number[];
+	/**
+	 * For shortcuts (a torso with its arms, hips with their legs): gets the
+	 * parts the shortcut is made of, placed on the figure, and returns them
+	 * moved, or null to keep the shortcut whole.
+	 */
+	rig?: (parts: Placement[]) => Placement[] | null;
 }
 
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -100,9 +106,13 @@ class Library {
 	async build(placements: Placement[]) {
 		await this.init();
 		const packs = await Promise.all(placements.map((p) => this.pack(p.id)));
-		const lines = placements.map(({ id, color, at = [0, 0, 0], m = IDENTITY }) =>
-			['1', color, ...at, ...m, `${id}.dat`].join(' ')
-		);
+		const line = ({ id, color, at = [0, 0, 0], m = IDENTITY }: Placement) =>
+			['1', color, ...at, ...m, `${id}.dat`].join(' ');
+		const lines = placements.map((p, i) => {
+			const parts = p.rig && unpack(packs[i], p);
+			const moved = parts && p.rig!(parts);
+			return moved ? moved.map(line).join('\n') : line(p);
+		});
 		const text = `0 FILE model.ldr\n${lines.join('\n')}\n${packs.join('')}`;
 		const group = await this.parse(text);
 		group.traverse((o) => {
@@ -121,6 +131,38 @@ class Library {
 }
 
 export const library = new Library();
+
+/**
+ * The parts a shortcut is made of, placed where `parent` puts them. Null when
+ * the part has geometry of its own: it cannot be split.
+ */
+function unpack(pack: string, parent: Placement): Placement[] | null {
+	const own = pack
+		.split(/\n0 FILE /)[0]
+		.split('\n')
+		.slice(1);
+	if (own.some((l) => /^\s*[2-5]\s/.test(l))) return null;
+	const frame: Pose3 = { at: [...(parent.at ?? [0, 0, 0])] as Vec, m: parent.m ?? IDENTITY };
+	const parts: Placement[] = [];
+	for (const l of own) {
+		const v = l.trim().split(/\s+/);
+		if (v[0] !== '1' || v.length < 15) continue;
+		const n = v.slice(2, 14).map(Number);
+		const color = Number(v[1]);
+		const p = compose(frame, { at: [n[0], n[1], n[2]], m: n.slice(3) });
+		parts.push({
+			id: v
+				.slice(14)
+				.join(' ')
+				.replace(/\.dat$/i, ''),
+			// 16 is "the colour of the parent"
+			color: color === 16 ? parent.color : color,
+			at: p.at,
+			m: p.m
+		});
+	}
+	return parts.length ? parts : null;
+}
 
 /**
  * Short display name: "Head with Standard Grin Pattern (Hollow Stud)" -> "Standard Grin".
@@ -178,6 +220,10 @@ const rotZ = (deg: number): Mat => {
 	const [c, s] = [Math.cos(rad(deg)), Math.sin(rad(deg))];
 	return [c, -s, 0, s, c, 0, 0, 0, 1];
 };
+const inverse = (p: Pose3): Pose3 => {
+	const m = transpose(p.m);
+	return { at: apply(m, p.at).map((v) => -v) as Vec, m };
+};
 /** `child` expressed in `parent`'s frame, so it can follow the parent when it moves */
 const relative = (parent: Pose3, child: Pose3): Pose3 => ({
 	at: apply(transpose(parent.m), sub(child.at, parent.at)),
@@ -228,15 +274,37 @@ export interface Pose {
 	/** swings an arm forward (positive) or back at the shoulder */
 	armR: number;
 	armL: number;
+	/** raises an arm sideways, away from the body (a real minifig cannot) */
+	raiseR: number;
+	raiseL: number;
 	/** turns a hand around the wrist */
 	wristR: number;
 	wristL: number;
-	/** swings a standard leg at the hip, forward is positive */
+	/** swings a leg at the hip, forward is positive */
 	legR: number;
 	legL: number;
+	/** spreads a leg sideways (a real minifig cannot either) */
+	spreadR: number;
+	spreadL: number;
 }
 
-export const STANDING: Pose = { head: 0, armR: 0, armL: 0, wristR: 0, wristL: 0, legR: 0, legL: 0 };
+export const STANDING: Pose = {
+	head: 0,
+	armR: 0,
+	armL: 0,
+	raiseR: 0,
+	raiseL: 0,
+	wristR: 0,
+	wristL: 0,
+	legR: 0,
+	legL: 0,
+	spreadR: 0,
+	spreadL: 0
+};
+
+/** Hips alone, plain or printed: the standard legs go under them */
+export const hipsOnly = (part?: Part) =>
+	part?.cat === 'legs' && /^Hips( with (?!Tentacles)|$)/.test(part.name);
 
 /** Every slot can be emptied: `id: null` */
 export interface Figure {
@@ -263,13 +331,47 @@ const place = (id: string, color: number, p: Pose3): Placement => ({
 	m: [...p.m]
 });
 
-export function placements(fig: Figure, torso?: Part, head?: Part): Placement[] {
+interface Joint {
+	/** where the part sits at rest */
+	rest: readonly number[];
+	move: Pose3;
+}
+
+/**
+ * Splits a shortcut: each of its parts found at the rest position of a joint
+ * gets that joint's move. Each move is used once, in order, so two parts at the
+ * same place (both legs) get the first and the second one.
+ */
+const rig =
+	(joints: Joint[]) =>
+	(parts: Placement[]): Placement[] | null => {
+		const left = [...joints];
+		let moved = false;
+		const out = parts.map((p) => {
+			const i = left.findIndex(({ rest }) => Math.hypot(...sub(rest, p.at!)) < 1);
+			if (i < 0) return p;
+			moved = true;
+			const [{ move }] = left.splice(i, 1);
+			return place(p.id, p.color, compose(move, { at: p.at as Vec, m: p.m ?? IDENTITY }));
+		});
+		return moved ? out : null;
+	};
+
+/** A leg swings around the hip pin (X) and spreads sideways from its top */
+function legMove(right: boolean, swing: number, spread: number): Pose3 {
+	const pivot: Vec = [right ? -10 : 10, LEGS[1], 0];
+	const m = mul(rotZ(right ? spread : -spread), rotX(-swing));
+	return { at: sub(pivot, apply(m, pivot)), m };
+}
+
+export function placements(fig: Figure, torso?: Part, head?: Part, legs?: Part): Placement[] {
 	const pose = { ...STANDING, ...fig.pose };
 	const list: Placement[] = [];
 	// Moulded heads sit on the torso as is, headgear goes on their top
 	const moulded = head?.moulded !== undefined;
 	const turn = rotY(pose.head);
-	if (fig.torso.id) list.push({ id: fig.torso.id, color: fig.torso.color });
+	const body: Placement | null = fig.torso.id ? { id: fig.torso.id, color: fig.torso.color } : null;
+	if (body) list.push(body);
 	if (fig.head.id) {
 		list.push(place(fig.head.id, fig.head.color, { at: moulded ? [0, 0, 0] : HEAD, m: turn }));
 	}
@@ -280,27 +382,47 @@ export function placements(fig: Figure, torso?: Part, head?: Part): Placement[] 
 	for (const slot of [fig.neck, fig.back])
 		if (slot.id) list.push({ id: slot.id, color: slot.color });
 	if (fig.legs.id === STANDARD_LEGS) {
-		list.push(...standardLegs(fig.legs.hips, fig.legs.color, pose.legR, pose.legL));
+		list.push(...standardLegs(fig.legs.hips, fig.legs.color, pose));
+	} else if (fig.legs.id && hipsOnly(legs)) {
+		const [, ...both] = standardLegs(fig.legs.hips, fig.legs.color, pose);
+		list.push({ id: fig.legs.id, color: fig.legs.hips, at: [...HIPS] }, ...both);
 	} else if (fig.legs.id) {
-		list.push({ id: fig.legs.id, color: fig.legs.color, at: [...HIPS] });
+		// Hips and legs shortcuts have both legs 12 LDU under the hips, the right one first
+		list.push({
+			id: fig.legs.id,
+			color: fig.legs.color,
+			at: [...HIPS],
+			rig: rig([
+				{ rest: LEGS, move: legMove(true, pose.legR, pose.spreadR) },
+				{ rest: LEGS, move: legMove(false, pose.legL, pose.spreadL) }
+			])
+		});
 	}
-	if (!fig.torso.id) return list;
+	if (!body) return list;
 
-	// Arms swing around the shoulder pin (their X axis); hands and what they hold
-	// follow. Torsos that come with their own arms keep the standard hands.
+	// Arms swing around the shoulder pin (their X axis) and rise sideways; hands
+	// and what they hold follow. Torsos that come with their own arms are split
+	// up so that their arms move the same way.
 	const own = !!torso?.arms;
+	const joints: Joint[] = [];
 	for (const side of ['right', 'left'] as const) {
 		const R = side === 'right';
 		const armRest = R ? ARM_RIGHT : ARM_LEFT;
-		const arm: Pose3 = own
-			? armRest
-			: { at: armRest.at, m: mul(armRest.m, rotX(-(R ? pose.armR : pose.armL))) };
-		const hand0 = own ? (R ? HAND_RIGHT : HAND_LEFT) : compose(arm, HAND_IN_ARM[side]);
+		const handRest = R ? HAND_RIGHT : HAND_LEFT;
+		const raise = rotZ(R ? pose.raiseR : -pose.raiseL);
+		const arm: Pose3 = {
+			at: armRest.at,
+			m: mul(raise, mul(armRest.m, rotX(-(R ? pose.armR : pose.armL))))
+		};
+		const hand0 = compose(arm, HAND_IN_ARM[side]);
 		// The wrist peg runs along the hand's Z axis
-		const hand: Pose3 = own
-			? hand0
-			: { at: hand0.at, m: mul(hand0.m, rotZ(R ? pose.wristR : pose.wristL)) };
-		if (!own) {
+		const hand: Pose3 = { at: hand0.at, m: mul(hand0.m, rotZ(R ? pose.wristR : pose.wristL)) };
+		if (own) {
+			joints.push(
+				{ rest: armRest.at, move: compose(arm, inverse(armRest)) },
+				{ rest: handRest.at, move: compose(hand, inverse(handRest)) }
+			);
+		} else {
 			list.push(place(R ? '3818' : '3819', fig.torso.arms, arm));
 			list.push(place('3820', fig.torso.hands, hand));
 		}
@@ -310,14 +432,16 @@ export function placements(fig: Figure, torso?: Part, head?: Part): Placement[] 
 			list.push(place(item.id, item.color, grip));
 		}
 	}
+	if (own) body.rig = rig(joints);
 	return list;
 }
 
-export function standardLegs(hips: number, legs: number, legR = 0, legL = 0): Placement[] {
-	// Legs swing around the hip pin, along X through their origin
+export function standardLegs(hips: number, legs: number, pose: Partial<Pose> = {}): Placement[] {
+	const p = { ...STANDING, ...pose };
+	const rest: Pose3 = { at: LEGS, m: IDENTITY };
 	return [
 		{ id: '3815', color: hips, at: [...HIPS] },
-		{ id: '3816', color: legs, at: [...LEGS], m: rotX(-legR) },
-		{ id: '3817', color: legs, at: [...LEGS], m: rotX(-legL) }
+		place('3816', legs, compose(legMove(true, p.legR, p.spreadR), rest)),
+		place('3817', legs, compose(legMove(false, p.legL, p.spreadL), rest))
 	];
 }

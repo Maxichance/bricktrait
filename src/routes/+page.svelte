@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { asset } from '$app/paths';
 	import {
+		hipsOnly,
 		library,
 		shortName,
 		STANDARD_LEGS,
@@ -46,6 +47,13 @@
 		{ k: 'wristL', label: 'poseWristL', min: -180, max: 180 },
 		{ k: 'legR', label: 'poseLegR', min: -90, max: 90 },
 		{ k: 'legL', label: 'poseLegL', min: -90, max: 90 }
+	] as const;
+	// Beyond what a real minifig can do
+	const ADVANCED = [
+		{ k: 'raiseR', label: 'poseRaiseR', min: -20, max: 160 },
+		{ k: 'raiseL', label: 'poseRaiseL', min: -20, max: 160 },
+		{ k: 'spreadR', label: 'poseSpreadR', min: -30, max: 90 },
+		{ k: 'spreadL', label: 'poseSpreadL', min: -30, max: 90 }
 	] as const;
 	const PRESETS: {
 		label: 'presetStand' | 'presetWave' | 'presetWalk' | 'presetSit' | 'presetCheer';
@@ -118,7 +126,7 @@
 				];
 			case 'legs':
 				return [
-					...(f.legs.id === STANDARD_LEGS
+					...(f.legs.id === STANDARD_LEGS || hipsOnly(find(f.legs.id))
 						? [target(t('hips'), f.legs.hips, (c) => (f.legs.hips = c))]
 						: []),
 					target(t('legs'), f.legs.color, (c) => (f.legs.color = c))
@@ -455,25 +463,33 @@
 							>
 						{/each}
 					</div>
-					{#if torso?.arms}
-						<p class="muted">{t('ownArms')}</p>
-					{/if}
+					{#snippet joint(j: (typeof JOINTS)[number] | (typeof ADVANCED)[number])}
+						<label class="range">
+							<span>{t(j.label)}</span>
+							<input
+								type="range"
+								min={j.min}
+								max={j.max}
+								step="5"
+								bind:value={portrait.figure.pose[j.k]}
+							/>
+							<span class="mono val">{portrait.figure.pose[j.k] ?? 0}°</span>
+						</label>
+					{/snippet}
 					<div class="ranges">
 						{#each JOINTS as j (j.k)}
-							<label class="range">
-								<span>{t(j.label)}</span>
-								<input
-									type="range"
-									min={j.min}
-									max={j.max}
-									step="5"
-									bind:value={portrait.figure.pose[j.k]}
-									disabled={!!torso?.arms && /^(arm|wrist)/.test(j.k)}
-								/>
-								<span class="mono val">{portrait.figure.pose[j.k]}°</span>
-							</label>
+							{@render joint(j)}
 						{/each}
 					</div>
+					<details class="advanced">
+						<summary class="label">{t('poseAdvanced')}</summary>
+						<p class="muted">{t('poseAdvancedHint')}</p>
+						<div class="ranges">
+							{#each ADVANCED as j (j.k)}
+								{@render joint(j)}
+							{/each}
+						</div>
+					</details>
 				{:else}
 					<div class="seg wrap" role="group" aria-label={t('background')}>
 						{#each BACKGROUNDS as b (b)}
@@ -863,8 +879,12 @@
 		padding: 0 10px;
 		font-size: 0.84rem;
 	}
-	.ranges input:disabled {
-		opacity: 0.35;
+	.advanced {
+		margin-top: 14px;
+	}
+	.advanced summary {
+		cursor: pointer;
+		margin-bottom: 8px;
 	}
 	.ranges {
 		display: grid;
