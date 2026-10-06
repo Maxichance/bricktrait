@@ -86,7 +86,7 @@ check('number keys switch slots, Delete empties the active one', async () => {
 });
 
 check('the × button removes a part', async () => {
-	const legs = (await page.$$('.slot')).at(-1);
+	const legs = (await page.$$('.slot'))[5];
 	await (await legs.$('.remove')).click();
 	assert.equal((await state()).legs.id, null);
 });
@@ -104,7 +104,12 @@ check('dragging the portrait turns it, as one undo step', async () => {
 	assert.ok(Math.abs(turned.yaw) > 10, `yaw is ${turned.yaw}`);
 	await page.evaluate(() => document.activeElement?.blur?.());
 	await key('z', ['Control']);
-	assert.equal((await view()).yaw, before ?? 0);
+	const after = await view();
+	assert.equal(
+		after.yaw,
+		before ?? 0,
+		JSON.stringify({ before, turned: turned.yaw, after: after.yaw })
+	);
 });
 
 check('a share link reopens the same figure', async () => {

@@ -50,6 +50,33 @@ const GROUPS = [
 			[/^Minifig ((?!with\b)\S+ ){0,2}(Hat|Crown|Tiara|Turban|Bonnet|Beret)\b/, 'Hat'],
 			[/^Minifig ((?!with\b)\S+ ){0,2}(Headdress|Headphones|Headset)\b/, 'Headdress']
 		]
+	},
+	{
+		// Held in the hand grip: their bar runs along Y through the origin
+		cat: 'hand',
+		kinds: [
+			[
+				/^Minifig (Sword|Axe|Battleaxe|Weapon|Gun|Spear|Pike|Lance|Polearm|Dagger|Knife|Knifes|Bow|Crossbow|Whip|Flail|Scythe|Blade|Bladed|Lightsaber|Harpoon|Speargun|Machete|Tomahawk|Chakram|Boomerang|Slingshot|Kendo)\b/,
+				'Weapon'
+			],
+			[/^Minifig Shield\b/, 'Shield'],
+			[
+				/^Minifig (Tool|Shovel|Pickaxe|Jackhammer|Hose|Broom|Mop|Pushbroom|Brush|Paint|Welding|Chainsaw|Sledgehammer|Pitchfork|Oar|Ladle|Frypan|Saucepan|Utensil|Cutlery|Whisk|Plunger|Spray|Watering|Syringe|Keys?|Handcuffs|Comb|Hairbrush|Fishing|Hockey|Baseball Bat|Bat|Tennis|Ski Pole|Crutch|Lasso)\b/,
+				'Tool'
+			],
+			[
+				/^Minifig (Food|Cup|Mug|Goblet|Bottle|Wine|Teapot|Steak|Candy|Sundae|Carrot|Rice|Serving|Tray|Saucer|Pot|Dinner|Chopsticks|Ice Cream|Cauldron)\b/,
+				'Food'
+			],
+			[
+				/^Minifig (Acoustic|Electric|Saxophone|Violin|Banjo|Lute|Maracas|Bugle|Microphone|Boombox|Guitar)\b/,
+				'Music'
+			],
+			[
+				/^Minifig (Camera|Radio|Binoculars|Telescope|Megaphone|Loudhailer|Lantern|Torch|Umbrella|Book|Sextant|Compass|Signal|Video|Computer|Game|Balloon|Trophy|Statuette|Coins?|Candle|Candelabra|Magic|Wand|Staff|Ball|Basketball|Soccer|Suitcase|Satchel|Shopping|Toy|Teddy|Pen|Lightning|Flame|Fire|Dynamite|Telephone|Phone|Headset|Ring)\b/,
+				'Gear'
+			]
+		]
 	}
 ];
 // Themes, guessed from the part name and its !KEYWORDS (first match wins).
@@ -359,7 +386,7 @@ for (const f of ['CAreadme.txt', 'CAlicense.txt', 'CAlicense4.txt'])
 const count = (cat) => catalog.filter((c) => c.cat === cat).length;
 const coreSize = fs.statSync(path.join(OUT, 'core.ldr')).size;
 console.log(
-	`${count('head')} heads, ${count('headgear')} headgear, ${count('torso')} torsos, ${count('legs')} legs, ${count('neck')} neck, ${count('back')} back` +
+	`${count('head')} heads, ${count('headgear')} headgear, ${count('torso')} torsos, ${count('legs')} legs, ${count('neck')} neck, ${count('back')} back, ${count('hand')} hand` +
 		` | core ${core.length} files ${(coreSize / 1e6).toFixed(1)} MB` +
 		` | shared ${shared.length} files ${(sharedBytes / 1e6).toFixed(1)} MB` +
 		` | packs ${(bytes / 1e6).toFixed(1)} MB (avg ${(bytes / parts.length / 1e3).toFixed(0)} kB,` +

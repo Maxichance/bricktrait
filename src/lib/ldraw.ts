@@ -2,7 +2,7 @@ import { Group, LineSegments, Mesh } from 'three';
 import { LDrawLoader } from 'three/addons/loaders/LDrawLoader.js';
 import { LDrawConditionalLineMaterial } from 'three/addons/materials/LDrawConditionalLineMaterial.js';
 
-export type Category = 'head' | 'headgear' | 'neck' | 'back' | 'torso' | 'legs' | 'body';
+export type Category = 'head' | 'headgear' | 'neck' | 'back' | 'torso' | 'legs' | 'hand' | 'body';
 
 export interface Part {
 	id: string;
@@ -135,23 +135,108 @@ export function shortName(name: string) {
 	return short ? short[0].toUpperCase() + short.slice(1) : name;
 }
 
-// Standard minifig assembly, from the LDraw torso shortcuts (e.g. 12896.dat)
-const ARM_RIGHT = { at: [-15.552, 9, 0], m: [0.985, -0.17, 0, 0.17, 0.985, 0, 0, 0, 1] } as const;
-const ARM_LEFT = { at: [15.552, 9, 0], m: [0.985, 0.17, 0, -0.17, 0.985, 0, 0, 0, 1] } as const;
-const HAND_RIGHT = {
+// --- minifig assembly ------------------------------------------------------
+// Standard offsets from the LDraw torso shortcuts (e.g. 12896.dat, 973c01.dat)
+
+type Vec = [number, number, number];
+type Mat = number[];
+interface Pose3 {
+	at: Vec;
+	m: Mat;
+}
+
+const mul = (a: Mat, b: Mat): Mat =>
+	[0, 1, 2].flatMap((i) =>
+		[0, 1, 2].map((j) => a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j])
+	);
+const apply = (m: Mat, v: readonly number[]): Vec => [
+	m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
+	m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
+	m[6] * v[0] + m[7] * v[1] + m[8] * v[2]
+];
+const transpose = (m: Mat): Mat => [m[0], m[3], m[6], m[1], m[4], m[7], m[2], m[5], m[8]];
+const add = (a: readonly number[], b: readonly number[]): Vec => [
+	a[0] + b[0],
+	a[1] + b[1],
+	a[2] + b[2]
+];
+const sub = (a: readonly number[], b: readonly number[]): Vec => [
+	a[0] - b[0],
+	a[1] - b[1],
+	a[2] - b[2]
+];
+const rad = (deg: number) => (deg * Math.PI) / 180;
+const rotX = (deg: number): Mat => {
+	const [c, s] = [Math.cos(rad(deg)), Math.sin(rad(deg))];
+	return [1, 0, 0, 0, c, -s, 0, s, c];
+};
+const rotY = (deg: number): Mat => {
+	const [c, s] = [Math.cos(rad(deg)), Math.sin(rad(deg))];
+	return [c, 0, s, 0, 1, 0, -s, 0, c];
+};
+const rotZ = (deg: number): Mat => {
+	const [c, s] = [Math.cos(rad(deg)), Math.sin(rad(deg))];
+	return [c, -s, 0, s, c, 0, 0, 0, 1];
+};
+/** `child` expressed in `parent`'s frame, so it can follow the parent when it moves */
+const relative = (parent: Pose3, child: Pose3): Pose3 => ({
+	at: apply(transpose(parent.m), sub(child.at, parent.at)),
+	m: mul(transpose(parent.m), child.m)
+});
+const compose = (parent: Pose3, local: Pose3): Pose3 => ({
+	at: add(parent.at, apply(parent.m, local.at)),
+	m: mul(parent.m, local.m)
+});
+
+const ARM_RIGHT: Pose3 = { at: [-15.552, 9, 0], m: [0.985, -0.17, 0, 0.17, 0.985, 0, 0, 0, 1] };
+const ARM_LEFT: Pose3 = { at: [15.552, 9, 0], m: [0.985, 0.17, 0, -0.17, 0.985, 0, 0, 0, 1] };
+const HAND_RIGHT: Pose3 = {
 	at: [-23.6904, 26.774, -9.8982],
 	m: [0.985, -0.1202, 0.1202, 0.17, 0.6964, -0.6964, 0, 0.707, 0.707]
-} as const;
-const HAND_LEFT = {
+};
+const HAND_LEFT: Pose3 = {
 	at: [23.6904, 26.774, -9.8982],
 	m: [0.985, 0.1202, -0.1202, -0.17, 0.6964, -0.6964, 0, 0.707, 0.707]
-} as const;
-const HEAD = [0, -24, 0] as [number, number, number];
-const HIPS = [0, 32, 0] as [number, number, number];
-const LEGS = [0, 44, 0] as [number, number, number];
+};
+// Hands in their arm's frame: they follow the arm when it swings
+const HAND_IN_ARM = { right: relative(ARM_RIGHT, HAND_RIGHT), left: relative(ARM_LEFT, HAND_LEFT) };
+const HEAD: Vec = [0, -24, 0];
+const HIPS: Vec = [0, 32, 0];
+const LEGS: Vec = [0, 44, 0];
+
+// The grip of 3820.dat is the axis through its two ring primitives; held
+// accessories have their bar along Y through their origin.
+const RING_A = [0, 4.502, -8.518];
+const RING_B = [0, -6.1478, -11.2716];
+const GRIP: Vec = [0, (RING_A[1] + RING_B[1]) / 2, (RING_A[2] + RING_B[2]) / 2];
+const AXIS = (() => {
+	const d = sub(RING_B, RING_A);
+	const n = Math.hypot(...d);
+	return d.map((v) => v / n);
+})();
+// Columns: X stays X, Y against the ring A to B direction (so a sword's blade,
+// along -Y, points forward out of the fist), Z = X × Y
+const TO_GRIP: Mat = [1, 0, 0, 0, -AXIS[1], AXIS[2], 0, -AXIS[2], -AXIS[1]];
 
 /** Legs id for plain hips and legs with their own colours */
 export const STANDARD_LEGS = 'standard';
+
+/** Joint angles in degrees, all 0 for the standard standing pose */
+export interface Pose {
+	/** turns the head (and headgear) left or right */
+	head: number;
+	/** swings an arm forward (positive) or back at the shoulder */
+	armR: number;
+	armL: number;
+	/** turns a hand around the wrist */
+	wristR: number;
+	wristL: number;
+	/** swings a standard leg at the hip, forward is positive */
+	legR: number;
+	legL: number;
+}
+
+export const STANDING: Pose = { head: 0, armR: 0, armL: 0, wristR: 0, wristL: 0, legR: 0, legL: 0 };
 
 /** Every slot can be emptied: `id: null` */
 export interface Figure {
@@ -165,46 +250,74 @@ export interface Figure {
 	torso: { id: string | null; color: number; arms: number; hands: number };
 	/** `color` is the legs colour, `hips` only applies to STANDARD_LEGS */
 	legs: { id: string | null; color: number; hips: number };
+	/** held accessories; `spin` turns them around the grip, in degrees */
+	handR: { id: string | null; color: number; spin: number };
+	handL: { id: string | null; color: number; spin: number };
+	pose: Pose;
 }
 
+const place = (id: string, color: number, p: Pose3): Placement => ({
+	id,
+	color,
+	at: [...p.at],
+	m: [...p.m]
+});
+
 export function placements(fig: Figure, torso?: Part, head?: Part): Placement[] {
+	const pose = { ...STANDING, ...fig.pose };
 	const list: Placement[] = [];
 	// Moulded heads sit on the torso as is, headgear goes on their top
 	const moulded = head?.moulded !== undefined;
+	const turn = rotY(pose.head);
 	if (fig.torso.id) list.push({ id: fig.torso.id, color: fig.torso.color });
 	if (fig.head.id) {
-		list.push({ id: fig.head.id, color: fig.head.color, at: moulded ? [0, 0, 0] : [...HEAD] });
+		list.push(place(fig.head.id, fig.head.color, { at: moulded ? [0, 0, 0] : HEAD, m: turn }));
 	}
 	if (fig.headgear.id) {
-		const at: [number, number, number] = moulded ? [0, head!.moulded!, 0] : [...HEAD];
-		list.push({ id: fig.headgear.id, color: fig.headgear.color, at });
+		const at: Vec = moulded ? [0, head!.moulded!, 0] : HEAD;
+		list.push(place(fig.headgear.id, fig.headgear.color, { at, m: turn }));
 	}
 	for (const slot of [fig.neck, fig.back])
 		if (slot.id) list.push({ id: slot.id, color: slot.color });
 	if (fig.legs.id === STANDARD_LEGS) {
-		list.push(...standardLegs(fig.legs.hips, fig.legs.color));
+		list.push(...standardLegs(fig.legs.hips, fig.legs.color, pose.legR, pose.legL));
 	} else if (fig.legs.id) {
-		list.push({ id: fig.legs.id, color: fig.legs.color, at: HIPS });
+		list.push({ id: fig.legs.id, color: fig.legs.color, at: [...HIPS] });
 	}
-	if (fig.torso.id && !torso?.arms) {
-		list.push(
-			{ id: '3818', color: fig.torso.arms, ...copy(ARM_RIGHT) },
-			{ id: '3819', color: fig.torso.arms, ...copy(ARM_LEFT) },
-			{ id: '3820', color: fig.torso.hands, ...copy(HAND_RIGHT) },
-			{ id: '3820', color: fig.torso.hands, ...copy(HAND_LEFT) }
-		);
+	if (!fig.torso.id) return list;
+
+	// Arms swing around the shoulder pin (their X axis); hands and what they hold
+	// follow. Torsos that come with their own arms keep the standard hands.
+	const own = !!torso?.arms;
+	for (const side of ['right', 'left'] as const) {
+		const R = side === 'right';
+		const armRest = R ? ARM_RIGHT : ARM_LEFT;
+		const arm: Pose3 = own
+			? armRest
+			: { at: armRest.at, m: mul(armRest.m, rotX(-(R ? pose.armR : pose.armL))) };
+		const hand0 = own ? (R ? HAND_RIGHT : HAND_LEFT) : compose(arm, HAND_IN_ARM[side]);
+		// The wrist peg runs along the hand's Z axis
+		const hand: Pose3 = own
+			? hand0
+			: { at: hand0.at, m: mul(hand0.m, rotZ(R ? pose.wristR : pose.wristL)) };
+		if (!own) {
+			list.push(place(R ? '3818' : '3819', fig.torso.arms, arm));
+			list.push(place('3820', fig.torso.hands, hand));
+		}
+		const item = R ? fig.handR : fig.handL;
+		if (item.id) {
+			const grip = compose(hand, { at: GRIP, m: mul(TO_GRIP, rotY(item.spin)) });
+			list.push(place(item.id, item.color, grip));
+		}
 	}
 	return list;
 }
 
-export function standardLegs(hips: number, legs: number): Placement[] {
+export function standardLegs(hips: number, legs: number, legR = 0, legL = 0): Placement[] {
+	// Legs swing around the hip pin, along X through their origin
 	return [
 		{ id: '3815', color: hips, at: [...HIPS] },
-		{ id: '3816', color: legs, at: [...LEGS] },
-		{ id: '3817', color: legs, at: [...LEGS] }
+		{ id: '3816', color: legs, at: [...LEGS], m: rotX(-legR) },
+		{ id: '3817', color: legs, at: [...LEGS], m: rotX(-legL) }
 	];
-}
-
-function copy(p: { at: readonly number[]; m: readonly number[] }) {
-	return { at: [...p.at] as [number, number, number], m: [...p.m] };
 }

@@ -1,5 +1,5 @@
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
-import { STANDARD_LEGS, type Figure, type Part } from './ldraw';
+import { STANDARD_LEGS, STANDING, type Figure, type Part } from './ldraw';
 import type { View } from './scene';
 import { defaultStyle, type Style } from './compose';
 
@@ -16,7 +16,10 @@ export const initial: Portrait = {
 		neck: { id: null, color: 6 },
 		back: { id: null, color: 4 },
 		torso: { id: '973p01', color: 15, arms: 4, hands: 14 },
-		legs: { id: STANDARD_LEGS, color: 1, hips: 1 }
+		legs: { id: STANDARD_LEGS, color: 1, hips: 1 },
+		handR: { id: null, color: 71, spin: 0 },
+		handL: { id: null, color: 71, spin: 0 },
+		pose: { ...STANDING }
 	},
 	view: { yaw: 0, pitch: 0, zoom: 1 },
 	style: { ...defaultStyle }
@@ -64,7 +67,10 @@ export function fromHash(hash: string): Portrait | null {
 				neck: { id: null, color: 6 },
 				back: { id: null, color: 4 },
 				legs: { ...initial.figure.legs },
-				...figure
+				handR: { ...initial.figure.handR },
+				handL: { ...initial.figure.handL },
+				...figure,
+				pose: { ...STANDING, ...figure.pose }
 			},
 			view: { ...initial.view, ...view },
 			style: { ...initial.style, ...style }
@@ -93,6 +99,9 @@ export function randomize(catalog: Part[]) {
 		neck: { id: Math.random() < 0.2 ? pick(of('neck')).id : null, color: pick(colors) },
 		back: { id: Math.random() < 0.2 ? pick(of('back')).id : null, color: pick(colors) },
 		torso: { id: torso.id, color: pick(colors), arms: pick(colors), hands: pick(skin) },
+		handR: { id: Math.random() < 0.3 ? pick(of('hand')).id : null, color: pick(colors), spin: 0 },
+		handL: { id: null, color: 71, spin: 0 },
+		pose: { ...STANDING },
 		legs:
 			Math.random() < 0.6
 				? { id: STANDARD_LEGS, color: pick(colors), hips: pick(colors) }

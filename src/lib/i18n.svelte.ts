@@ -50,6 +50,9 @@ const en = {
 	back: 'Back',
 	torso: 'Torso',
 	legs: 'Legs',
+	handR: 'Right hand',
+	handL: 'Left hand',
+	spin: 'Turn in hand',
 	// colours
 	colour: 'Colour',
 	skin: 'Skin',
@@ -82,7 +85,21 @@ const en = {
 	standardLegs: 'Standard hips and legs',
 	preview:
 		'Portrait preview. Drag or use the arrow keys to turn, scroll or pinch to zoom, double click to reset.',
-	language: 'Language'
+	language: 'Language',
+	pose: 'Pose',
+	poseHead: 'Head',
+	poseArmR: 'Right arm',
+	poseArmL: 'Left arm',
+	poseWristR: 'Right wrist',
+	poseWristL: 'Left wrist',
+	poseLegR: 'Right leg',
+	poseLegL: 'Left leg',
+	presetStand: 'Stand',
+	presetWave: 'Wave',
+	presetWalk: 'Walk',
+	presetSit: 'Sit',
+	presetCheer: 'Cheer',
+	ownArms: 'This torso has its own arms: they cannot move.'
 };
 
 type Key = keyof typeof en;
@@ -131,6 +148,9 @@ const fr: Record<Key, string> = {
 	back: 'Dos',
 	torso: 'Torse',
 	legs: 'Jambes',
+	handR: 'Main droite',
+	handL: 'Main gauche',
+	spin: 'Rotation dans la main',
 	colour: 'Couleur',
 	skin: 'Peau',
 	arms: 'Bras',
@@ -161,7 +181,21 @@ const fr: Record<Key, string> = {
 	standardLegs: 'Hanches et jambes standard',
 	preview:
 		'Aperçu du portrait. Faites glisser ou utilisez les flèches pour tourner, la molette ou deux doigts pour zoomer, double-clic pour réinitialiser.',
-	language: 'Langue'
+	language: 'Langue',
+	pose: 'Pose',
+	poseHead: 'Tête',
+	poseArmR: 'Bras droit',
+	poseArmL: 'Bras gauche',
+	poseWristR: 'Poignet droit',
+	poseWristL: 'Poignet gauche',
+	poseLegR: 'Jambe droite',
+	poseLegL: 'Jambe gauche',
+	presetStand: 'Debout',
+	presetWave: 'Salut',
+	presetWalk: 'Marche',
+	presetSit: 'Assis',
+	presetCheer: 'Victoire',
+	ownArms: 'Ce torse a ses propres bras : ils ne bougent pas.'
 };
 
 // Filter groups and themes, as found in the catalogue
@@ -179,6 +213,12 @@ const NAMES_FR: Record<string, string> = {
 	Cape: 'Capes',
 	Pack: 'Sacs',
 	Wings: 'Ailes',
+	Weapon: 'Armes',
+	Shield: 'Boucliers',
+	Tool: 'Outils',
+	Food: 'Nourriture',
+	Music: 'Musique',
+	Gear: 'Objets',
 	'Super Heroes': 'Super-héros',
 	'Games & TV': 'Jeux et séries',
 	Monsters: 'Monstres',

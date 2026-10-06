@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { asset } from '$app/paths';
-	import { library, shortName, STANDARD_LEGS, type Color, type Part } from '#lib/ldraw.ts';
+	import {
+		library,
+		shortName,
+		STANDARD_LEGS,
+		STANDING,
+		type Color,
+		type Part,
+		type Pose
+	} from '#lib/ldraw.ts';
 	import { MIN_ZOOM } from '#lib/scene.ts';
 	import { renderer } from '#lib/render.ts';
 	import { fromHash, initial, portrait, randomize, toHash } from '#lib/state.svelte.ts';
@@ -12,7 +20,7 @@
 	import Slot from '#lib/components/Slot.svelte';
 	import ColorBar from '#lib/components/ColorBar.svelte';
 
-	type SlotId = 'headgear' | 'head' | 'neck' | 'back' | 'torso' | 'legs';
+	type SlotId = 'headgear' | 'head' | 'neck' | 'back' | 'torso' | 'legs' | 'handR' | 'handL';
 	// Top to bottom, like the figure
 	const SLOTS: { id: SlotId; key: string }[] = [
 		{ id: 'headgear', key: '1' },
@@ -20,9 +28,32 @@
 		{ id: 'neck', key: '3' },
 		{ id: 'back', key: '4' },
 		{ id: 'torso', key: '5' },
-		{ id: 'legs', key: '6' }
+		{ id: 'legs', key: '6' },
+		{ id: 'handR', key: '7' },
+		{ id: 'handL', key: '8' }
 	];
+	// Both hands pick from the same parts
+	const catOf = (slot: SlotId) => (slot === 'handR' || slot === 'handL' ? 'hand' : slot);
 	const BACKGROUNDS = ['space', 'solid', 'none'] as const;
+	const JOINTS = [
+		{ k: 'head', label: 'poseHead', min: -90, max: 90 },
+		{ k: 'armR', label: 'poseArmR', min: -90, max: 180 },
+		{ k: 'armL', label: 'poseArmL', min: -90, max: 180 },
+		{ k: 'wristR', label: 'poseWristR', min: -180, max: 180 },
+		{ k: 'wristL', label: 'poseWristL', min: -180, max: 180 },
+		{ k: 'legR', label: 'poseLegR', min: -90, max: 90 },
+		{ k: 'legL', label: 'poseLegL', min: -90, max: 90 }
+	] as const;
+	const PRESETS: {
+		label: 'presetStand' | 'presetWave' | 'presetWalk' | 'presetSit' | 'presetCheer';
+		pose: Partial<Pose>;
+	}[] = [
+		{ label: 'presetStand', pose: {} },
+		{ label: 'presetWave', pose: { armL: 150, wristL: 20, head: 10 } },
+		{ label: 'presetWalk', pose: { armR: -25, armL: 25, legR: 25, legL: -25 } },
+		{ label: 'presetSit', pose: { armR: 30, armL: 30, legR: 90, legL: 90 } },
+		{ label: 'presetCheer', pose: { armR: 160, armL: 160, head: 0 } }
+	];
 	const VIEW = [
 		{ k: 'yaw', label: 'turn', min: -70, max: 70, step: 1 },
 		{ k: 'pitch', label: 'tilt', min: -25, max: 35, step: 1 },
@@ -37,6 +68,8 @@
 	let progress = $state(0);
 	let size = $state(512);
 	let copied = $state(false);
+	const SETTINGS = ['camera', 'pose', 'scene'] as const;
+	let settingsTab: (typeof SETTINGS)[number] = $state('camera');
 
 	const standard = $derived<Part>({ id: STANDARD_LEGS, name: t('standardLegs'), cat: 'legs' });
 	const of = (cat: string) => catalog.filter((p) => p.cat === cat);
@@ -46,7 +79,9 @@
 		neck: of('neck'),
 		back: of('back'),
 		torso: of('torso'),
-		legs: [standard, ...of('legs')]
+		legs: [standard, ...of('legs')],
+		handR: of('hand'),
+		handL: of('hand')
 	});
 	const find = (id: string | null) =>
 		id === STANDARD_LEGS ? standard : catalog.find((p) => p.id === id);
@@ -284,68 +319,108 @@
 			</div>
 
 			<section class="settings" aria-label="{t('camera')} · {t('scene')}">
-				<h2 class="label">{t('camera')}</h2>
-				<div class="ranges">
-					{#each VIEW as r (r.k)}
-						<label class="range">
-							<span>{t(r.label)}</span>
-							<input
-								type="range"
-								min={r.min}
-								max={r.max}
-								step={r.step}
-								bind:value={portrait.view[r.k]}
-							/>
-							<span class="mono val">
-								{r.k === 'zoom'
-									? `${portrait.view.zoom.toFixed(2)}×`
-									: `${Math.round(portrait.view[r.k])}°`}
-							</span>
-						</label>
-					{/each}
-				</div>
-
-				<h2 class="label">{t('scene')}</h2>
-				<div class="seg" role="group" aria-label={t('background')}>
-					{#each BACKGROUNDS as b (b)}
+				<div class="tabs" role="tablist">
+					{#each SETTINGS as tab (tab)}
 						<button
 							type="button"
-							aria-pressed={portrait.style.background === b}
-							onclick={() => (portrait.style.background = b)}
-							>{t(b === 'none' ? 'transparent' : b)}</button
+							role="tab"
+							aria-selected={settingsTab === tab}
+							onclick={() => (settingsTab = tab)}>{t(tab)}</button
 						>
 					{/each}
 				</div>
-				<div class="row">
-					{#if portrait.style.background !== 'none'}
-						<label class="color">
-							<input type="color" bind:value={portrait.style.backdrop} />
-							<span>{portrait.style.background === 'space' ? t('disc') : t('fill')}</span>
-						</label>
+				{#if settingsTab === 'camera'}
+					<div class="ranges">
+						{#each VIEW as r (r.k)}
+							<label class="range">
+								<span>{t(r.label)}</span>
+								<input
+									type="range"
+									min={r.min}
+									max={r.max}
+									step={r.step}
+									bind:value={portrait.view[r.k]}
+								/>
+								<span class="mono val">
+									{r.k === 'zoom'
+										? `${portrait.view.zoom.toFixed(2)}×`
+										: `${Math.round(portrait.view[r.k])}°`}
+								</span>
+							</label>
+						{/each}
+					</div>
+				{:else if settingsTab === 'pose'}
+					<div class="presets" role="group" aria-label={t('pose')}>
+						{#each PRESETS as p (p.label)}
+							<button
+								type="button"
+								class="btn small"
+								onclick={() => (portrait.figure.pose = { ...STANDING, ...p.pose })}
+								>{t(p.label)}</button
+							>
+						{/each}
+					</div>
+					{#if torso?.arms}
+						<p class="muted">{t('ownArms')}</p>
 					{/if}
-					<label class="color" class:off={!portrait.style.ring}>
-						<input
-							type="color"
-							bind:value={portrait.style.ringColor}
-							disabled={!portrait.style.ring}
-						/>
-						<span>{t('ring')}</span>
-					</label>
-					<label class="check">
-						<input type="checkbox" bind:checked={portrait.style.ring} />
-						<span>{t('showRing')}</span>
-					</label>
-					<label class="check">
-						<input type="checkbox" bind:checked={portrait.style.retro} />
-						<span>{t('retro')}</span>
-					</label>
-				</div>
+					<div class="ranges">
+						{#each JOINTS as j (j.k)}
+							<label class="range">
+								<span>{t(j.label)}</span>
+								<input
+									type="range"
+									min={j.min}
+									max={j.max}
+									step="5"
+									bind:value={portrait.figure.pose[j.k]}
+									disabled={!!torso?.arms && /^(arm|wrist)/.test(j.k)}
+								/>
+								<span class="mono val">{portrait.figure.pose[j.k]}°</span>
+							</label>
+						{/each}
+					</div>
+				{:else}
+					<div class="seg" role="group" aria-label={t('background')}>
+						{#each BACKGROUNDS as b (b)}
+							<button
+								type="button"
+								aria-pressed={portrait.style.background === b}
+								onclick={() => (portrait.style.background = b)}
+								>{t(b === 'none' ? 'transparent' : b)}</button
+							>
+						{/each}
+					</div>
+					<div class="row">
+						{#if portrait.style.background !== 'none'}
+							<label class="color">
+								<input type="color" bind:value={portrait.style.backdrop} />
+								<span>{portrait.style.background === 'space' ? t('disc') : t('fill')}</span>
+							</label>
+						{/if}
+						<label class="color" class:off={!portrait.style.ring}>
+							<input
+								type="color"
+								bind:value={portrait.style.ringColor}
+								disabled={!portrait.style.ring}
+							/>
+							<span>{t('ring')}</span>
+						</label>
+						<label class="check">
+							<input type="checkbox" bind:checked={portrait.style.ring} />
+							<span>{t('showRing')}</span>
+						</label>
+						<label class="check">
+							<input type="checkbox" bind:checked={portrait.style.retro} />
+							<span>{t('retro')}</span>
+						</label>
+					</div>
+				{/if}
 			</section>
 
 			<footer>
 				<p>
 					{#each pieces('keys') as p, i (i)}
-						{#if p.slot === 'slots'}<kbd>1</kbd>–<kbd>6</kbd>
+						{#if p.slot === 'slots'}<kbd>1</kbd>–<kbd>8</kbd>
 						{:else if p.slot === 'del'}<kbd>Del</kbd>
 						{:else if p.slot === 'undo'}<kbd>Ctrl</kbd>+<kbd>Z</kbd>
 						{:else}{p.text}{/if}
@@ -374,7 +449,7 @@
 					{@const f = portrait.figure[s.id]}
 					<Slot
 						label={t(s.id)}
-						cat={s.id}
+						cat={catOf(s.id)}
 						id={f.id}
 						name={shortName(find(f.id)?.name ?? f.id ?? '')}
 						fullName={find(f.id)?.name ?? ''}
@@ -412,11 +487,18 @@
 						<ColorBar {targets} {colors} />
 						{#if active === 'legs'}
 							<p class="muted">{t('legsHint')}</p>
+						{:else if active === 'handR' || active === 'handL'}
+							{@const hand = portrait.figure[active]}
+							<label class="spin">
+								<span>{t('spin')}</span>
+								<input type="range" min="-180" max="180" step="5" bind:value={hand.spin} />
+								<span class="mono val">{hand.spin}°</span>
+							</label>
 						{/if}
 						<div class="parts">
 							<PartPicker
 								parts={lists[active]}
-								cat={active}
+								cat={catOf(active)}
 								selected={f.id}
 								color={f.color}
 								onpick={(id) => pick(active, id)}
@@ -544,10 +626,42 @@
 		flex-direction: column;
 		gap: 8px;
 	}
-	.settings h2 {
-		margin: 4px 0 0;
+	.tabs {
+		display: flex;
+		gap: 18px;
+		border-bottom: 1.5px solid var(--line);
+		margin-bottom: 4px;
+	}
+	.tabs button {
+		padding: 4px 0 6px;
+		margin-bottom: -1.5px;
+		border: 0;
+		border-bottom: 2px solid transparent;
+		background: none;
+		color: var(--muted);
+		font-size: 0.78rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+	.tabs button[aria-selected='true'] {
+		color: var(--ink);
+		border-bottom-color: var(--yellow);
 	}
 	/* One grid for the three sliders: labels of any length line up */
+	.presets {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.btn.small {
+		height: 30px;
+		padding: 0 10px;
+		font-size: 0.84rem;
+	}
+	.ranges input:disabled {
+		opacity: 0.35;
+	}
 	.ranges {
 		display: grid;
 		grid-template-columns: max-content 1fr 52px;
@@ -654,7 +768,7 @@
 	}
 	.slots {
 		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: 8px;
 	}
 	.panel {
@@ -665,6 +779,17 @@
 		background: var(--sunk);
 		border-radius: var(--radius);
 		min-height: 60vh;
+	}
+	.spin {
+		display: grid;
+		grid-template-columns: max-content 1fr 52px;
+		align-items: center;
+		gap: 12px;
+		max-width: 520px;
+		font-size: 0.9rem;
+	}
+	.spin input {
+		accent-color: var(--ink);
 	}
 	.parts {
 		flex: 1;
@@ -717,8 +842,11 @@
 		.stage {
 			min-height: 0;
 			overflow-y: auto;
-			scrollbar-width: thin;
-			padding-right: 4px;
+			/* Scrolls only on short screens, without a visible bar */
+			scrollbar-width: none;
+		}
+		.stage::-webkit-scrollbar {
+			display: none;
 		}
 		.editor {
 			min-height: 0;

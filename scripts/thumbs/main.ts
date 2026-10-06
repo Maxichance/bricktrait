@@ -1,7 +1,8 @@
 // Renders part thumbnails for scripts/build-thumbs.mjs, with the app's own code.
 import { library, STANDARD_LEGS, type Part } from '../../src/lib/ldraw';
 import { Stage } from '../../src/lib/scene';
-import { drawThumb, THUMB_COLORS } from '../../src/lib/thumbs';
+import { drawThumb } from '../../src/lib/thumb-render';
+import { THUMB_COLORS } from '../../src/lib/thumbs';
 
 declare global {
 	interface Window {

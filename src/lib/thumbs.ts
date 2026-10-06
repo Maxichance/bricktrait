@@ -1,15 +1,9 @@
 // Part thumbnails. Most come pre-rendered from the build (static/thumbs/, see
 // scripts/build-thumbs.mjs) in each slot's default colour; other colours are
 // rendered here, one at a time on a single offscreen stage.
-import { library, standardLegs, STANDARD_LEGS, type Category } from './ldraw';
+import { library, type Category } from './ldraw';
 import { Stage } from './scene';
-
-export const THUMB_SIZE = 160;
-/**
- * Bump when a change outside scene.ts and this file alters how parts look
- * (materials in ldraw.ts for instance): the build then renders every thumbnail again.
- */
-export const THUMB_VERSION = 1;
+import { drawThumb } from './thumb-render';
 
 /** Colour of the pre-rendered thumbnails, matching the default figure */
 export const THUMB_COLORS: Partial<Record<Category, number>> = {
@@ -18,18 +12,9 @@ export const THUMB_COLORS: Partial<Record<Category, number>> = {
 	neck: 6,
 	back: 4,
 	torso: 15,
-	legs: 1
+	legs: 1,
+	hand: 71
 };
-
-/** Renders one part, shared by the app and the build script. */
-export async function drawThumb(stage: Stage, id: string, color: number) {
-	const parts = id === STANDARD_LEGS ? standardLegs(color, color) : [{ id, color }];
-	stage.setModel(await library.build(parts));
-	stage.fit({ yaw: -25, pitch: 12, zoom: 1 });
-	const canvas = stage.render(THUMB_SIZE);
-	stage.setModel(null);
-	return canvas;
-}
 
 /** Where the pre-rendered thumbnail of a part is served. */
 export const staticThumb = (id: string) =>
