@@ -259,6 +259,13 @@
 		}
 	}
 
+	// A share link pasted in the address bar of an open tab
+	function openLink() {
+		const shared = fromHash(location.hash);
+		if (shared && toHash(shared) !== toHash($state.snapshot(portrait)))
+			Object.assign(portrait, shared);
+	}
+
 	function startOver() {
 		Object.assign(portrait, structuredClone(initial));
 	}
@@ -266,6 +273,7 @@
 
 <svelte:window
 	onkeydown={keydown}
+	onhashchange={openLink}
 	onpointerdown={sliderDown}
 	onpointerup={sliderUp}
 	onpointercancel={sliderUp}
