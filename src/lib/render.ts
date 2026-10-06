@@ -49,3 +49,13 @@ class PortraitRenderer {
 }
 
 export const renderer = new PortraitRenderer();
+
+/** False on browsers or machines without WebGL, where nothing can be drawn. */
+export function webglAvailable() {
+	try {
+		const c = document.createElement('canvas');
+		return !!(c.getContext('webgl2') ?? c.getContext('webgl'));
+	} catch {
+		return false;
+	}
+}

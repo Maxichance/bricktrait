@@ -12,8 +12,9 @@ import { createServer } from 'vite';
 
 const OUT = path.resolve('static/thumbs');
 const BATCH = 40;
-// Files that change how a thumbnail looks (new parts are simply added)
-const INPUTS = ['src/lib/scene.ts', 'src/lib/thumbs.ts', 'src/lib/ldraw.ts'];
+// Files that change how a thumbnail looks (new parts are simply added).
+// Other changes that matter bump THUMB_VERSION in thumbs.ts.
+const INPUTS = ['src/lib/scene.ts', 'src/lib/thumbs.ts'];
 
 const CHROME =
 	process.env.CHROME_PATH ??

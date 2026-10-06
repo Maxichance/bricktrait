@@ -5,6 +5,11 @@ import { library, standardLegs, STANDARD_LEGS, type Category } from './ldraw';
 import { Stage } from './scene';
 
 export const THUMB_SIZE = 160;
+/**
+ * Bump when a change outside scene.ts and this file alters how parts look
+ * (materials in ldraw.ts for instance): the build then renders every thumbnail again.
+ */
+export const THUMB_VERSION = 1;
 
 /** Colour of the pre-rendered thumbnails, matching the default figure */
 export const THUMB_COLORS: Partial<Record<Category, number>> = {

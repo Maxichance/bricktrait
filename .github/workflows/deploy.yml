@@ -41,7 +41,7 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: static/thumbs
-          key: thumbs-${{ hashFiles('src/lib/scene.ts', 'src/lib/thumbs.ts', 'src/lib/ldraw.ts') }}
+          key: thumbs-${{ hashFiles('src/lib/scene.ts', 'src/lib/thumbs.ts') }}
       - run: npm run thumbs
       - run: npm run lint
       - run: npm run check

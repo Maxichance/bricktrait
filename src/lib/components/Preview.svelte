@@ -1,18 +1,22 @@
 <script lang="ts">
-	import { renderer } from '#lib/render.ts';
+	import { renderer, webglAvailable } from '#lib/render.ts';
 	import { initial, portrait } from '#lib/state.svelte.ts';
 	import { MIN_ZOOM } from '#lib/scene.ts';
 
 	const SIZE = 640;
+	const webgl = webglAvailable();
 	let canvas: HTMLCanvasElement;
 	let busy = $state(true);
 	let error = $state('');
+	let attempt = $state(0);
 
 	const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 
 	// Figure changes need a rebuild, view and style changes only a redraw
 	$effect(() => {
 		const figure = $state.snapshot(portrait.figure);
+		void attempt;
+		if (!webgl) return;
 		busy = true;
 		renderer
 			.update(figure)
@@ -37,18 +41,36 @@
 		renderer.draw(canvas, SIZE, $state.snapshot(portrait.view), $state.snapshot(portrait.style));
 	}
 
-	let drag: { x: number; y: number } | null = null;
+	// One pointer turns the figure, two (touch) pinch to zoom
+	const pointers = new Map<number, { x: number; y: number }>();
+	let pinch = 0;
+	const spread = () => {
+		const [a, b] = [...pointers.values()];
+		return Math.hypot(a.x - b.x, a.y - b.y);
+	};
 
 	function down(e: PointerEvent) {
-		drag = { x: e.clientX, y: e.clientY };
+		pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 		canvas.setPointerCapture(e.pointerId);
+		if (pointers.size === 2) pinch = spread();
 	}
 	function move(e: PointerEvent) {
-		if (!drag) return;
+		const last = pointers.get(e.pointerId);
+		if (!last) return;
 		const v = portrait.view;
-		v.yaw = clamp(v.yaw + (e.clientX - drag.x) * 0.4, -70, 70);
-		v.pitch = clamp(v.pitch + (e.clientY - drag.y) * 0.3, -25, 35);
-		drag = { x: e.clientX, y: e.clientY };
+		pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		if (pointers.size === 2) {
+			const now = spread();
+			if (pinch > 0) v.zoom = clamp((v.zoom * now) / pinch, MIN_ZOOM, 2);
+			pinch = now;
+		} else if (pointers.size === 1) {
+			v.yaw = clamp(v.yaw + (e.clientX - last.x) * 0.4, -70, 70);
+			v.pitch = clamp(v.pitch + (e.clientY - last.y) * 0.3, -25, 35);
+		}
+	}
+	function up(e: PointerEvent) {
+		pointers.delete(e.pointerId);
+		pinch = 0;
 	}
 	function wheel(e: WheelEvent) {
 		e.preventDefault();
@@ -75,17 +97,25 @@
 		aria-label="Portrait preview. Drag or use the arrow keys to turn, scroll to zoom, double click to reset."
 		onpointerdown={down}
 		onpointermove={move}
-		onpointerup={() => (drag = null)}
-		onpointercancel={() => (drag = null)}
+		onpointerup={up}
+		onpointercancel={up}
 		onwheel={wheel}
 		onkeydown={keys}
 		ondblclick={() => (portrait.view = { ...initial.view })}
 	></canvas>
-	{#if busy}
+	{#if !webgl}
+		<p class="notice" role="alert">
+			Your browser cannot draw 3D (WebGL is off or not supported). Try another browser, or turn on
+			hardware acceleration in its settings.
+		</p>
+	{:else if busy}
 		<span class="spinner" aria-label="Loading"></span>
 	{/if}
 	{#if error}
-		<p class="error" role="alert">{error}</p>
+		<p class="error" role="alert">
+			<span>Some parts did not load: {error}</span>
+			<button type="button" onclick={() => attempt++}>Retry</button>
+		</p>
 	{/if}
 </div>
 
@@ -122,12 +152,37 @@
 	.error {
 		position: absolute;
 		inset: auto 12px 12px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
 		margin: 0;
-		padding: 8px 12px;
+		padding: 8px 8px 8px 12px;
 		border-radius: 8px;
 		background: var(--red);
 		color: #fff;
 		font-size: 0.9rem;
+	}
+	.error button {
+		flex: none;
+		height: 30px;
+		padding: 0 12px;
+		border: 0;
+		border-radius: 6px;
+		background: #fff;
+		color: var(--red);
+		font-weight: 700;
+	}
+	.notice {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		margin: 0;
+		padding: 40px;
+		color: #fff;
+		text-align: center;
+		line-height: 1.5;
 	}
 	@keyframes spin {
 		to {

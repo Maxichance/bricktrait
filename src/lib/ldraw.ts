@@ -44,21 +44,34 @@ class Library {
 	catalog: Part[] = [];
 	colors: Color[] = [];
 
+	/** Called as the library files arrive: (done, total) */
+	onprogress: ((done: number, total: number) => void) | null = null;
+
+	/** Loads the catalogue, colours and shared files once; can be called again after a failure. */
 	init() {
 		this.ready ??= (async () => {
 			this.loader.setPartsLibraryPath(this.base);
 			this.loader.setConditionalLineMaterial(LDrawConditionalLineMaterial);
+			const total = 5;
+			let done = 0;
+			const tick = <T>(p: Promise<T>) => p.then((v) => (this.onprogress?.(++done, total), v));
+			const get = (file: string) =>
+				fetch(this.base + file).then((r) => {
+					if (!r.ok) throw new Error(`${file}: ${r.status}`);
+					return r;
+				});
 			const [catalog, colors, core] = await Promise.all([
-				fetch(`${this.base}catalog.json`).then((r) => r.json()),
-				fetch(`${this.base}colors.json`).then((r) => r.json()),
-				fetch(`${this.base}core.ldr`).then((r) => r.text()),
-				this.loader.preloadMaterials(`${this.base}LDConfig.ldr`)
+				tick(get('catalog.json').then((r) => r.json())),
+				tick(get('colors.json').then((r) => r.json())),
+				tick(get('core.ldr').then((r) => r.text())),
+				tick(this.loader.preloadMaterials(`${this.base}LDConfig.ldr`))
 			]);
 			this.catalog = catalog;
 			this.colors = colors;
 			// Parsing the core pack puts its files in the loader cache
-			await this.parse(core);
+			await tick(this.parse(core));
 		})();
+		this.ready.catch(() => (this.ready = null));
 		return this.ready;
 	}
 

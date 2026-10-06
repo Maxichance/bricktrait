@@ -89,9 +89,11 @@
 		}
 	});
 
-	$effect(() => {
-		const shared = fromHash(location.hash);
-		if (shared) Object.assign(portrait, shared);
+	let progress = $state(0);
+
+	function load() {
+		failed = '';
+		library.onprogress = (done, total) => (progress = done / total);
 		library
 			.init()
 			.then(() => {
@@ -100,6 +102,12 @@
 				ready = true;
 			})
 			.catch((e: Error) => (failed = e.message));
+	}
+
+	$effect(() => {
+		const shared = fromHash(location.hash);
+		if (shared) Object.assign(portrait, shared);
+		load();
 	});
 
 	// Keep the address bar shareable, and the undo history up to date
@@ -326,9 +334,24 @@
 
 			<div class="panel">
 				{#if failed}
-					<p class="error" role="alert">Could not load the parts: {failed}</p>
+					<div class="state" role="alert">
+						<p class="error">Could not load the parts library ({failed}).</p>
+						<button type="button" class="btn" onclick={load}>Retry</button>
+					</div>
 				{:else if !ready}
-					<p class="muted">Loading the parts library…</p>
+					<div class="state">
+						<p class="muted">Loading the parts library…</p>
+						<div
+							class="bar"
+							role="progressbar"
+							aria-label="Loading"
+							aria-valuemin="0"
+							aria-valuemax="100"
+							aria-valuenow={Math.round(progress * 100)}
+						>
+							<span style:width="{progress * 100}%"></span>
+						</div>
+					</div>
 				{:else}
 					{@const f = portrait.figure[active]}
 					{#key active}
@@ -564,6 +587,30 @@
 	}
 	.error {
 		color: var(--red);
+		margin: 0;
+	}
+	.state {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+		max-width: 360px;
+		margin: 40px auto;
+		width: 100%;
+	}
+	.bar {
+		width: 100%;
+		height: 8px;
+		border: 1.5px solid var(--ink);
+		border-radius: 4px;
+		background: var(--card);
+		overflow: hidden;
+	}
+	.bar span {
+		display: block;
+		height: 100%;
+		background: var(--yellow);
+		transition: width 0.2s;
 	}
 
 	/* Desktop: an app, not a page. Header and portrait stay, the catalogue scrolls. */
