@@ -120,7 +120,18 @@ const en = {
 	imageCopied: 'Image copied',
 	copyFailed: 'Copy is not allowed here, use Download.',
 	exportOptions: 'Export options',
-	ringPreset: 'Ring colour'
+	ringPreset: 'Ring colour',
+	parts: 'Parts',
+	resetView: 'Reset view',
+	cameraHint: 'Drag the portrait to turn it, scroll or pinch to zoom.',
+	rendering: 'Rendering',
+	resetJoint: 'Back to 0',
+	wrists: 'Wrists',
+	right: 'Right',
+	left: 'Left',
+	editing: 'Editing',
+	poseRaise: 'Raise arms sideways',
+	poseSpread: 'Spread legs'
 };
 
 type Key = keyof typeof en;
@@ -238,7 +249,18 @@ const fr: Record<Key, string> = {
 	imageCopied: 'Image copiée',
 	copyFailed: 'Copie impossible ici, utilisez Télécharger.',
 	exportOptions: "Options d'export",
-	ringPreset: "Couleur de l'anneau"
+	ringPreset: "Couleur de l'anneau",
+	parts: 'Pièces',
+	resetView: 'Recentrer',
+	cameraHint: 'Faites glisser le portrait pour le tourner, molette ou pincement pour zoomer.',
+	rendering: 'Rendu',
+	resetJoint: 'Remettre à 0',
+	wrists: 'Poignets',
+	right: 'Droite',
+	left: 'Gauche',
+	editing: 'Modification',
+	poseRaise: 'Lever les bras sur le côté',
+	poseSpread: 'Écarter les jambes'
 };
 
 // Filter groups and themes, as found in the catalogue

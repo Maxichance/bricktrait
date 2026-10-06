@@ -11,6 +11,7 @@
 		fullName = '',
 		color,
 		active,
+		shortcut,
 		onselect,
 		onremove
 	}: {
@@ -23,6 +24,8 @@
 		fullName?: string;
 		color: Color | undefined;
 		active: boolean;
+		/** keyboard shortcut, shown in the tooltip */
+		shortcut: string;
 		onselect: () => void;
 		onremove: () => void;
 	} = $props();
@@ -34,7 +37,7 @@
 		class="pick"
 		aria-pressed={active}
 		aria-label="{label}: {id ? fullName || name : t('empty')}"
-		title={id ? fullName || name : undefined}
+		title="{label} · {id ? fullName || name : t('empty')} ({shortcut})"
 		onclick={onselect}
 	>
 		<span class="tile">
@@ -44,18 +47,7 @@
 				<span class="plus" aria-hidden="true">+</span>
 			{/if}
 		</span>
-		<span class="text">
-			<span class="label">{label}</span>
-			{#if id}
-				<span class="name">{name}</span>
-				<span class="meta">
-					<span class="dot" style:background={color?.hex}></span>
-					<span class="mono">{id}</span>
-				</span>
-			{:else}
-				<span class="name none">{t('empty')}</span>
-			{/if}
-		</span>
+		<span class="label">{label}</span>
 	</button>
 	{#if id}
 		<button
@@ -77,95 +69,97 @@
 	}
 	.pick {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
-		gap: 10px;
+		gap: 4px;
 		width: 100%;
 		height: 100%;
-		padding: 7px;
-		padding-right: 26px;
-		text-align: left;
+		padding: 5px 4px 6px;
 		background: var(--card);
 		border: 1.5px solid var(--line);
 		border-radius: var(--radius);
 		transition:
 			border-color 0.12s,
-			box-shadow 0.12s;
+			box-shadow 0.12s,
+			transform 0.12s;
 	}
 	.pick:hover {
 		border-color: var(--ink-2);
 	}
 	.active .pick {
 		border-color: var(--ink);
+		background: #fff3c4;
 		box-shadow: 3px 3px 0 var(--ink);
+		transform: translate(-1px, -1px);
 	}
 	.tile {
-		flex: none;
 		display: grid;
 		place-items: center;
-		width: 46px;
-		height: 46px;
+		width: 100%;
+		max-width: 64px;
+		aspect-ratio: 1;
 		border-radius: 4px;
-		background: var(--sunk);
 	}
 	.empty .tile {
-		background: none;
 		border: 1.5px dashed var(--line);
+		width: 70%;
+	}
+	.empty .pick {
+		background: transparent;
+		border-style: dashed;
 	}
 	.plus {
 		color: var(--muted);
-		font-size: 1.4rem;
+		font-size: 1.3rem;
 		line-height: 1;
 	}
-	.text {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		min-width: 0;
-	}
-	.name {
-		font-weight: 600;
-		font-size: 0.88rem;
-		line-height: 1.2;
+	.label {
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+		max-width: 100%;
+		font-size: 0.64rem;
+		line-height: 1.15;
+		letter-spacing: 0.04em;
+		text-align: center;
 	}
-	.name.none {
-		color: var(--muted);
-		font-weight: 500;
-	}
-	.meta {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		color: var(--muted);
-	}
-	.dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 2px;
-		box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2);
+	.active .label {
+		color: var(--ink);
 	}
 	.remove {
 		position: absolute;
-		top: 4px;
-		right: 4px;
+		top: -7px;
+		right: -7px;
 		display: grid;
 		place-items: center;
-		width: 22px;
-		height: 22px;
+		width: 20px;
+		height: 20px;
 		padding: 0;
-		border: 0;
-		border-radius: 4px;
-		background: none;
-		color: var(--muted);
-		font-size: 1.1rem;
+		border: 1.5px solid var(--ink);
+		border-radius: 50%;
+		background: var(--card);
+		color: var(--ink);
+		font-size: 0.9rem;
 		line-height: 1;
+		opacity: 0;
+		transition: opacity 0.12s;
+	}
+	.slot:hover .remove,
+	.active .remove,
+	.remove:focus-visible {
+		opacity: 1;
+	}
+	/* No hover on touch screens: the cross of the active slot is enough */
+	@media (hover: none) {
+		.slot:not(.active) .remove {
+			display: none;
+		}
 	}
 	.remove:hover {
 		background: var(--red);
+		border-color: var(--red);
 		color: #fff;
 	}
 </style>

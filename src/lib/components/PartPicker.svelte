@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Category, Part } from '#lib/ldraw.ts';
+	import { shortName, type Category, type Part } from '#lib/ldraw.ts';
 	import { search } from '#lib/search.ts';
 	import { isFavourite, prefs, toggleFavourite } from '#lib/prefs.svelte.ts';
 	import { t, tn } from '#lib/i18n.svelte.ts';
@@ -124,18 +124,6 @@
 			>
 			<input type="search" placeholder={t('search')} bind:value={query} />
 		</label>
-		<label class="select">
-			<span class="sr-only">{t('sort')}</span>
-			<select bind:value={sort}>
-				<option value="classic">{t('sortClassic')}</option>
-				<option value="name">{t('sortName')}</option>
-				<option value="new">{t('sortNew')}</option>
-			</select>
-		</label>
-		<span class="count mono">{shown.length} / {parts.length}</span>
-	</div>
-
-	<div class="row">
 		<div class="views" role="group" aria-label={t('all')}>
 			<button type="button" aria-pressed={view === 'all'} onclick={() => (view = 'all')}
 				>{t('all')}</button
@@ -150,8 +138,11 @@
 				>{t('recent')}</button
 			>
 		</div>
+	</div>
+
+	<div class="row">
 		{#if themes.length > 1}
-			<label class="select small">
+			<label class="select">
 				<span class="sr-only">{t('theme')}</span>
 				<select bind:value={theme}>
 					<option value="">{t('allThemes')}</option>
@@ -161,19 +152,30 @@
 				</select>
 			</label>
 		{/if}
+		<label class="select">
+			<span class="sr-only">{t('sort')}</span>
+			<select bind:value={sort}>
+				<option value="classic">{t('sortClassic')}</option>
+				<option value="name">{t('sortName')}</option>
+				<option value="new">{t('sortNew')}</option>
+			</select>
+		</label>
 		{#if extra}
 			<label class="check">
 				<input type="checkbox" bind:checked={flag} />
 				<span>{extra.label()}</span>
 			</label>
 		{/if}
+		<span class="count mono">{shown.length} / {parts.length}</span>
 	</div>
 
 	{#if kinds.length > 1}
 		<div class="kinds" role="group" aria-label={t('type')}>
 			<button type="button" aria-pressed={!kind} onclick={() => (kind = '')}>{t('all')}</button>
-			{#each kinds as [k] (k)}
-				<button type="button" aria-pressed={kind === k} onclick={() => (kind = k)}>{tn(k)}</button>
+			{#each kinds as [k, n] (k)}
+				<button type="button" aria-pressed={kind === k} onclick={() => (kind = k)}
+					>{tn(k)} <span class="n">{n}</span></button
+				>
 			{/each}
 		</div>
 	{/if}
@@ -189,13 +191,13 @@
 						class="pick"
 						aria-pressed={p.id === selected}
 						tabindex={i === focus ? 0 : -1}
-						title={p.name}
+						title="{p.name} · {p.id}"
 						onfocus={() => (focus = i)}
 						onclick={() => onpick(p.id)}
 					>
 						<Thumb id={p.id} {color} cat={p.cat} />
+						<span class="name">{shortName(p.name)}</span>
 						<span class="id mono">{p.id}</span>
-						<span class="sr-only">{p.name}</span>
 					</button>
 					<button
 						type="button"
@@ -237,19 +239,21 @@
 		min-height: 0;
 		overflow-y: auto;
 		margin: 0 -6px;
-		padding: 2px 6px 12px;
+		padding: 2px 6px 16px;
+		scrollbar-width: thin;
+		scrollbar-color: var(--line) transparent;
 	}
 	.filters,
 	.row {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 8px 12px;
+		gap: 8px;
 	}
 	.search {
 		position: relative;
 		flex: 1;
-		min-width: 180px;
+		min-width: 200px;
 	}
 	.search svg {
 		position: absolute;
@@ -275,12 +279,14 @@
 		padding: 0 12px 0 34px;
 	}
 	select {
-		padding: 0 8px;
-		font-size: 0.88rem;
+		max-width: 100%;
+		height: 32px;
+		padding: 0 6px;
+		font-size: 0.84rem;
 		cursor: pointer;
 	}
-	.small select {
-		height: 30px;
+	.select {
+		min-width: 0;
 	}
 	input:focus,
 	select:focus {
@@ -288,6 +294,7 @@
 		outline: none;
 	}
 	.count {
+		margin-left: auto;
 		color: var(--muted);
 		white-space: nowrap;
 	}
@@ -296,17 +303,18 @@
 		gap: 2px;
 		padding: 2px;
 		border-radius: var(--radius);
-		background: var(--paper);
+		background: var(--sunk);
 	}
 	.views button {
-		height: 26px;
-		padding: 0 10px;
+		height: 32px;
+		padding: 0 12px;
 		border: 0;
 		border-radius: 4px;
 		background: none;
 		color: var(--ink-2);
 		font-size: 0.84rem;
 		font-weight: 600;
+		white-space: nowrap;
 	}
 	.views button[aria-pressed='true'] {
 		background: var(--card);
@@ -317,37 +325,52 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		font-size: 0.86rem;
+		font-size: 0.84rem;
 		cursor: pointer;
+		white-space: nowrap;
 	}
 	.check input {
 		accent-color: var(--ink);
 	}
+	/* Kinds: one line of chips, scrolled sideways when they do not fit */
 	.kinds {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 2px 14px;
+		gap: 6px;
+		overflow-x: auto;
+		scrollbar-width: none;
+		margin: 0 -2px;
+		padding: 2px;
+	}
+	.kinds::-webkit-scrollbar {
+		display: none;
 	}
 	.kinds button {
-		padding: 2px 0;
-		border: 0;
-		border-bottom: 2px solid transparent;
-		background: none;
+		flex: none;
+		height: 28px;
+		padding: 0 11px;
+		border: 1.5px solid var(--line);
+		border-radius: 14px;
+		background: var(--card);
 		color: var(--ink-2);
 		font-weight: 600;
-		font-size: 0.88rem;
+		font-size: 0.82rem;
 	}
 	.kinds button:hover {
-		color: var(--ink);
+		border-color: var(--ink-2);
 	}
 	.kinds button[aria-pressed='true'] {
-		color: var(--ink);
-		border-bottom-color: var(--yellow);
+		border-color: var(--ink);
+		background: var(--ink);
+		color: var(--paper);
+	}
+	.n {
+		opacity: 0.55;
+		font-weight: 500;
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-		gap: 6px;
+		grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+		gap: 8px;
 	}
 	.item {
 		position: relative;
@@ -356,12 +379,17 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 2px;
+		gap: 3px;
 		width: 100%;
-		padding: 6px 4px 4px;
+		height: 100%;
+		padding: 8px 6px 7px;
 		background: var(--card);
 		border: 1.5px solid transparent;
 		border-radius: var(--radius);
+		text-align: center;
+	}
+	.pick :global(.thumb) {
+		width: 82%;
 	}
 	.pick:hover {
 		border-color: var(--line);
@@ -370,29 +398,41 @@
 		background: #fff3c4;
 		border-color: var(--ink);
 	}
+	.name {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		font-size: 0.74rem;
+		font-weight: 600;
+		line-height: 1.2;
+		color: var(--ink-2);
+		overflow-wrap: anywhere;
+	}
 	.id {
 		max-width: 100%;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		color: var(--muted);
-		font-size: 0.68rem;
+		font-size: 0.64rem;
 	}
-	.selected .id {
+	.selected .name {
 		color: var(--ink);
 	}
 	.star {
 		position: absolute;
 		top: 3px;
 		right: 3px;
-		width: 22px;
-		height: 22px;
+		width: 24px;
+		height: 24px;
 		padding: 0;
 		border: 0;
 		border-radius: 4px;
 		background: none;
 		color: var(--line);
-		font-size: 0.95rem;
+		font-size: 1rem;
 		line-height: 1;
 		opacity: 0;
 		transition: opacity 0.12s;
@@ -401,6 +441,11 @@
 	.item:focus-within .star,
 	.star.on {
 		opacity: 1;
+	}
+	@media (hover: none) {
+		.star {
+			opacity: 1;
+		}
 	}
 	.star:hover {
 		color: var(--ink-2);
@@ -414,5 +459,14 @@
 	.nothing {
 		color: var(--muted);
 		margin: 24px 0;
+	}
+	@media (max-width: 520px) {
+		.grid {
+			grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+			gap: 6px;
+		}
+		.search {
+			min-width: 100%;
+		}
 	}
 </style>
