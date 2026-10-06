@@ -21,7 +21,7 @@ const url = server.resolvedUrls.local[0];
 const browser = await puppeteer.launch({
 	executablePath: CHROME,
 	headless: true,
-	args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox']
+	args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--lang=en-US']
 });
 
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -56,7 +56,7 @@ check('loads the catalogue', async () => {
 });
 
 check('picking a part changes the figure', async () => {
-	await page.click('.picker .item[aria-pressed="false"]');
+	await page.click('.picker .pick[aria-pressed="false"]');
 	assert.notEqual((await state()).head.id, '3626cp01');
 });
 
@@ -75,8 +75,10 @@ check('Ctrl+Z undoes, Ctrl+Shift+Z and Ctrl+Y redo', async () => {
 check('number keys switch slots, Delete empties the active one', async () => {
 	await page.evaluate(() => document.activeElement?.blur?.());
 	await key('1');
-	const pressed = await page.$eval('.slot .pick[aria-pressed="true"]', (b) => b.ariaLabel);
-	assert.match(pressed, /^Headgear/);
+	const pressed = await page.$$eval('.slot .pick', (bs) =>
+		bs.findIndex((b) => b.getAttribute('aria-pressed') === 'true')
+	);
+	assert.equal(pressed, 0);
 	await key('Delete');
 	assert.equal((await state()).headgear.id, null);
 	await key('z', ['Control']);
@@ -106,7 +108,7 @@ check('dragging the portrait turns it, as one undo step', async () => {
 });
 
 check('a share link reopens the same figure', async () => {
-	await page.click('.picker .item:nth-child(5)');
+	await page.click('.picker .item:nth-child(5) .pick');
 	const fig = await state();
 	const link = await page.evaluate(() => location.href);
 	const other = await browser.newPage();
@@ -116,6 +118,54 @@ check('a share link reopens the same figure', async () => {
 	await other.close();
 	assert.equal(reopened, link.slice(link.indexOf('#')));
 	assert.ok(fig.head.id);
+});
+
+check('the star adds a favourite, listed under Favourites', async () => {
+	const first = await page.$('.picker .item');
+	await first.hover();
+	await (await first.$('.star')).click();
+	const id = await first.$eval('.pick', (b) => b.title);
+	await page.click('.views button:nth-child(2)');
+	await pause(200);
+	const listed = await page.$$eval('.picker .pick', (bs) => bs.map((b) => b.title));
+	assert.deepEqual(listed, [id]);
+	await page.click('.views button:nth-child(1)');
+});
+
+check('search forgives plurals and typos', async () => {
+	await page.keyboard.press('3'); // neck slot
+	await pause(300);
+	await page.type('.picker input[type=search]', 'beards');
+	await pause(300);
+	const plural = await page.$$eval('.picker .pick', (bs) => bs.length);
+	await page.$eval('.picker input[type=search]', (i) => (i.value = ''));
+	await page.type('.picker input[type=search]', 'moustahce');
+	await pause(300);
+	const typo = await page.$$eval('.picker .pick', (bs) => bs.length);
+	assert.ok(plural > 0 && typo > 0, `beards: ${plural}, moustahce: ${typo}`);
+	await page.evaluate(() => document.activeElement?.blur?.());
+	await page.keyboard.press('2'); // back to heads
+	await pause(300);
+});
+
+check('arrow keys move through the grid, Enter picks', async () => {
+	await page.focus('.picker .pick[tabindex="0"]');
+	await page.keyboard.press('ArrowRight');
+	await page.keyboard.press('ArrowDown');
+	await pause(100);
+	const focused = await page.evaluate(() => document.activeElement?.getAttribute('title'));
+	await page.keyboard.press('Enter');
+	const fig = await state();
+	assert.ok(focused);
+	assert.notEqual(fig.head.id, '3626cp01');
+});
+
+check('the interface switches to French', async () => {
+	await page.select('.lang select', 'fr');
+	await pause(200);
+	const label = await page.$eval('.slot .label', (l) => l.textContent);
+	assert.equal(label, 'Coiffe');
+	await page.select('.lang select', 'en');
 });
 
 let failed = 0;
