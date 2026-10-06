@@ -12,6 +12,10 @@ export interface Part {
 	kind?: string;
 	/** torso only: arms are part of the torso */
 	arms?: boolean;
+	/** guessed from the name and LDraw keywords: Star Wars, Castle, City... */
+	theme?: string;
+	/** year the part was added to or last updated in the LDraw library */
+	year?: number;
 	/** head only: moulded head (origin at the neck), the value is its top (y) */
 	moulded?: number;
 }

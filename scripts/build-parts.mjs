@@ -52,6 +52,63 @@ const GROUPS = [
 		]
 	}
 ];
+// Themes, guessed from the part name and its !KEYWORDS (first match wins).
+// Licensed themes come first: "Imperial" means Star Wars before it means Pirates.
+const THEMES = [
+	[
+		'Star Wars',
+		/\b(SW|Star Wars|Jedi|Sith|Stormtrooper|Clone|Mandalorian|Darth|Wookiee|Ewok|Gungan|Toydarian|Nautolan|Twi'lek|Rebel Pilot|Imperial Officer|Lightsaber)\b/i
+	],
+	[
+		'Harry Potter',
+		/\b(HP|Harry Potter|Hogwarts|Gryffindor|Slytherin|Hufflepuff|Ravenclaw|Dumbledore|Voldemort|Hagrid|Hermione|Weasley)\b/i
+	],
+	[
+		'Super Heroes',
+		/\b(Marvel|DC|Batman|Superman|Spider-?Man|Iron Man|Avengers|Joker|Wonder Woman|Hulk|Thor|Captain America|Black Panther|X-Men|Deadpool|Groot|Harley Quinn|Robin|Catwoman|Poison Ivy|Venom|Loki)\b/i
+	],
+	[
+		'Lord of the Rings',
+		/\b(LOTR|Hobbit|Rohan|Gondor|Uruk|Mordor|Gandalf|Gollum|Aragorn|Legolas|Gimli|Frodo|Theoden)\b/i
+	],
+	['Ninjago', /\b(Ninjago|Ninja|Sensei|Serpentine)\b/i],
+	[
+		'Pirates',
+		/\b(Pirates?|Redbeard|Islanders?|Imperial Soldier|Imperial Guard|Buccaneer|Corsair)\b/i
+	],
+	[
+		'Castle',
+		/\b(Castle|Knights?|Kingdoms|Black Falcon|Forest ?m[ae]n|Wolfpack|Crusader|Viking|Medieval|Jester|Dragon Masters|Royal)\b/i
+	],
+	[
+		'Space',
+		/\b(Space|Futuron|Blacktron|M-Tron|Ice Planet|Spyrius|Unitron|Exploriens|Insectoids|UFO|Mars|Martian|Astronaut|Galaxy Squad|Alien Conquest)\b/i
+	],
+	[
+		'City',
+		/\b(Police|Fire(fighter|man)?|Construction|Hospital|Doctor|Nurse|Coast Guard|Town|City|Airport|Pilot|Chef|Cook|Paramedic|EMT|Postman|Farmer|Train|Racer|Race)\b/i
+	],
+	['Western', /\b(Western|Cowboy|Sheriff|Bandit)\b/i],
+	['Adventurers', /\b(Adventurers|Pharaoh|Mummy|Egypt|Indiana Jones|Johnny Thunder)\b/i],
+	['Disney', /\b(Disney|Mickey|Minnie|Frozen|Elsa|Toy Story|Pixar|Moana|Aladdin|Muppets?)\b/i],
+	[
+		'Games & TV',
+		/\b(Minecraft|Sonic|Simpsons|SpongeBob|Minions?|Animal Crossing|Mario|Nintendo|Overwatch|Powerpuff|Scooby|Ghostbusters|Stranger Things|Ninja Turtles?|TMNT|Jurassic|Looney Tunes|Wednesday)\b/i
+	],
+	['Monsters', /\b(Zombie|Skeleton|Vampire|Werewolf|Ghost|Monster|Witch|Pumpkin)\b/i],
+	[
+		'Sports',
+		/\b(Soccer|Football|Hockey|Basketball|Baseball|Skater?|Surf(er)?|Ski(er)?|Cheerleader|Sports?)\b/i
+	]
+];
+const keywordsOf = (text) =>
+	[...text.matchAll(/^0 !KEYWORDS (.*)$/gm)]
+		.map((m) => m[1])
+		.join(', ')
+		// Shop references (BrickLink 3626pb0063, Set 7785...) are noise here
+		.replace(/\b(BrickLink|Rebrickable|Brickowl|Set) [\w-]+/gi, '');
+const themeOf = (text) => THEMES.find(([, re]) => re.test(text))?.[0];
+
 function classify(desc) {
 	for (const g of GROUPS)
 		for (const [re, kind] of g.kinds) if (re.test(desc)) return { cat: g.cat, kind };
@@ -221,6 +278,11 @@ for (const p of parts) {
 	fs.writeFileSync(path.join(OUT, 'p', `${id}.ldr`), text);
 	const entry = { id, name: p.desc.replace(/^Minifig /, ''), cat: p.cat };
 	if (p.kind) entry.kind = p.kind;
+	const source = read(`parts/${p.file}`);
+	const theme = themeOf(`${p.desc} ${keywordsOf(source)}`);
+	if (theme) entry.theme = theme;
+	const year = source.match(/^0 !LDRAW_ORG \S+ UPDATE (\d{4})/m)?.[1];
+	if (year) entry.year = Number(year);
 	if (p.cat === 'head') {
 		// Standard heads have their origin on top (stud base) and go down to y=24.
 		// Moulded heads (Sonic, E.T., animals...) have it at the neck instead:
