@@ -86,7 +86,9 @@ check('number keys switch slots, Delete empties the active one', async () => {
 });
 
 check('the × button removes a part', async () => {
+	// Select the slot first, as on a touch screen where only its × shows
 	const legs = (await page.$$('.slot'))[5];
+	await (await legs.$('.pick')).click();
 	await (await legs.$('.remove')).click();
 	assert.equal((await state()).legs.id, null);
 });

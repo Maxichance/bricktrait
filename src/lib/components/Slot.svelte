@@ -152,7 +152,7 @@
 		opacity: 1;
 	}
 	/* No hover on touch screens: the cross of the active slot is enough */
-	@media (hover: none) {
+	@media (hover: none) and (pointer: coarse) {
 		.slot:not(.active) .remove {
 			display: none;
 		}
