@@ -191,7 +191,7 @@
 						class="pick"
 						aria-pressed={p.id === selected}
 						tabindex={i === focus ? 0 : -1}
-						title="{p.name} · {p.id}"
+						title="{p.name} · {p.id}{p.unofficial ? ` · ${t('unofficialPart')}` : ''}"
 						onfocus={() => (focus = i)}
 						onclick={() => onpick(p.id)}
 					>

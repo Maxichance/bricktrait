@@ -16,6 +16,8 @@ export interface Part {
 	theme?: string;
 	/** year the part was added to or last updated in the LDraw library */
 	year?: number;
+	/** still in review on the LDraw Parts Tracker */
+	unofficial?: boolean;
 	/** head only: moulded head (origin at the neck), the value is its top (y) */
 	moulded?: number;
 }
@@ -302,9 +304,15 @@ export const STANDING: Pose = {
 	spreadL: 0
 };
 
-/** Hips alone, plain or printed: the standard legs go under them */
-export const hipsOnly = (part?: Part) =>
-	part?.cat === 'legs' && /^Hips( with (?!Tentacles)|$)/.test(part.name);
+/** Skirts slip over the standard hips and legs */
+const isSkirt = (part?: Part) => part?.cat === 'legs' && /^Skirt\b/.test(part.name);
+
+/**
+ * Hips alone (plain or printed) and skirts: the standard legs go under them,
+ * and they take the hips colour
+ */
+export const needsLegs = (part?: Part) =>
+	isSkirt(part) || (part?.cat === 'legs' && /^Hips( with (?!Tentacles)|$)/.test(part.name));
 
 /** Every slot can be emptied: `id: null` */
 export interface Figure {
@@ -383,8 +391,9 @@ export function placements(fig: Figure, torso?: Part, head?: Part, legs?: Part):
 		if (slot.id) list.push({ id: slot.id, color: slot.color });
 	if (fig.legs.id === STANDARD_LEGS) {
 		list.push(...standardLegs(fig.legs.hips, fig.legs.color, pose));
-	} else if (fig.legs.id && hipsOnly(legs)) {
-		const [, ...both] = standardLegs(fig.legs.hips, fig.legs.color, pose);
+	} else if (fig.legs.id && needsLegs(legs)) {
+		const [hips, ...both] = standardLegs(fig.legs.hips, fig.legs.color, pose);
+		if (isSkirt(legs)) list.push(hips);
 		list.push({ id: fig.legs.id, color: fig.legs.hips, at: [...HIPS] }, ...both);
 	} else if (fig.legs.id) {
 		// Hips and legs shortcuts have both legs 12 LDU under the hips, the right one first

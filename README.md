@@ -2,7 +2,7 @@
 
 # bricktrait
 
-**Free minifigure avatar maker: build your minifig profile picture from 3,000+ real parts, right in the browser.**
+**Free minifigure avatar maker: build your minifig profile picture from 4,700+ real parts, right in the browser.**
 
 ### [▶ Open bricktrait](https://maxichance.github.io/bricktrait/)
 
@@ -25,7 +25,7 @@ bricktrait is a **LEGO® minifigure avatar maker** and **pfp generator** for Git
 
 ## Features
 
-- **3,000+ real parts** from the LDraw library: 560 heads, 590 hair pieces, hats and helmets, beards, capes, armour and backpacks, 1,650 torsos, 320 hips and legs, and 650 things to hold, all with their original prints.
+- **4,700+ real parts** from the LDraw library and its Parts Tracker: 800 heads, 780 hair pieces, hats, helmets and masks, beards, capes, armour and backpacks, 1,870 torsos, 430 hips, legs and skirts, and 700 things to hold, all with their original prints.
 - **Eight slots**: headgear, head, neck, back, torso, legs and one accessory in each hand. Pick a slot, browse its parts by name, theme or type, keep favourites, find recent ones.
 - **Any colour** from the LDraw palette for skin, headgear, torso, arms, hands, hips, legs and accessories. Colours already on the figure come first, so matching is one click.
 - **Pose the figure**: head, arms, wrists and legs, on every torso and every pair of legs, plus presets (wave, walk, sit, cheer). Advanced settings go further than a real minifig: raise the arms sideways, spread the legs.
@@ -45,7 +45,7 @@ Every part is a real model from the [LDraw parts library](https://library.ldraw.
 ## Credits and licences
 
 - **Code**: [MIT](LICENSE) © Maxichance.
-- **Parts**: the [LDraw.org Parts Library](https://library.ldraw.org), by its contributors, licensed under [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/) and [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The files are repackaged (blank lines removed, references lower-cased), their geometry is not modified. The build ships `CREDITS.txt` with the author and licence of every file, next to the library's `CAreadme.txt` and licence texts.
+- **Parts**: the [LDraw.org Parts Library](https://library.ldraw.org) and, for the parts still in review, its [Parts Tracker](https://library.ldraw.org/tracker), by their contributors, licensed under [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/) and [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The files are repackaged (blank lines removed, references lower-cased), their geometry is not modified. The build ships `CREDITS.txt` with the author and licence of every file, next to the library's `CAreadme.txt` and licence texts.
 - **Colours**: `LDConfig.ldr` from the LDraw library, same licence.
 - **Libraries**: [three.js](https://github.com/mrdoob/three.js) (MIT), [Svelte and SvelteKit](https://github.com/sveltejs/kit) (MIT), [fflate](https://github.com/101arrowz/fflate) (MIT).
 - **Fonts**: [Archivo](https://github.com/Omnibus-Type/Archivo) and [IBM Plex Mono](https://github.com/IBM/plex), both under the SIL Open Font License, self-hosted through Fontsource.

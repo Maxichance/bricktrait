@@ -135,7 +135,8 @@ const en = {
 	fewerColours: 'Fewer',
 	findColour: 'Colour name or number',
 	onFigure: 'Already on the figure',
-	keyboard: 'Keyboard shortcuts'
+	keyboard: 'Keyboard shortcuts',
+	unofficialPart: 'community part, still in review at LDraw'
 };
 
 type Key = keyof typeof en;
@@ -268,7 +269,8 @@ const fr: Record<Key, string> = {
 	fewerColours: 'Moins',
 	findColour: 'Nom ou numéro de couleur',
 	onFigure: 'Déjà sur la figurine',
-	keyboard: 'Raccourcis clavier'
+	keyboard: 'Raccourcis clavier',
+	unofficialPart: 'pièce de la communauté, en cours de validation chez LDraw'
 };
 
 // Filter groups and themes, as found in the catalogue
@@ -279,6 +281,7 @@ const NAMES_FR: Record<string, string> = {
 	Hood: 'Capuches',
 	Hat: 'Chapeaux',
 	Headdress: 'Coiffes',
+	Mask: 'Masques',
 	Beard: 'Barbes',
 	Neckwear: 'Foulards',
 	Armour: 'Armures',

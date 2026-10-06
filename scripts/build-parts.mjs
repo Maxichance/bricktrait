@@ -10,6 +10,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const LDRAW = path.resolve(process.env.LDRAW_DIR ?? '.ldraw');
+// Parts still in review on the LDraw parts tracker, used when present. The
+// official library wins when a file is in both.
+const UNOFFICIAL = path.resolve(process.env.LDRAW_UNOFFICIAL_DIR ?? '.ldraw-unofficial');
+const HAS_UNOFFICIAL = fs.existsSync(path.join(UNOFFICIAL, 'parts'));
+const ROOTS = [
+	{ prefix: '', dir: LDRAW },
+	...(HAS_UNOFFICIAL ? [{ prefix: 'unf/', dir: UNOFFICIAL }] : [])
+];
 const OUT = path.resolve('static/ldraw');
 // A file referenced by at least this many parts goes in core.ldr
 const CORE_MIN_USES = Number(process.env.CORE_MIN_USES ?? 10);
@@ -23,8 +31,9 @@ const GROUPS = [
 		kinds: [
 			[/^Minifig (Hair )?(Beard|Moustache)\b/, 'Beard'],
 			[/^Minifig (Neckwear|Neck|Bandana|Collar|Scarf|Bowtie)\b/, 'Neckwear'],
-			[/^Minifig (Armour|Breastplate|Epaulette|Shoulder)\b/, 'Armour'],
-			[/^Minifig (Vest|Lifevest|Life Jacket|Lifeguard)\b/, 'Vest']
+			[/^Minifig (Face Scarf)\b/, 'Neckwear'],
+			[/^Minifig (Armour|Breastplate|Epaulette|Shoulder|Body Armour|Front Harness)\b/, 'Armour'],
+			[/^Minifig (Vest|Lifevest|Life Jacket|Lifeguard|Life Preserver|Life Ring)\b/, 'Vest']
 		]
 	},
 	{
@@ -32,13 +41,17 @@ const GROUPS = [
 		kinds: [
 			// Flat cloth capes are sewn sheets, only their formed versions look right
 			[/^Minifig Cape\b(?!.*Cloth(?!.*Formed))/, 'Cape'],
-			[/^Minifig (Backpack|Airtanks|Jet-Pack|Scuba)\b/, 'Pack'],
+			[/^Minifig Ghost Shroud\b/, 'Cape'],
+			[
+				/^Minifig (Backpack|Airtanks|Jet-Pack|Scuba|Arrow Quiver|Quiver|Ninja Turtle Shell)\b/,
+				'Pack'
+			],
 			[/^Minifig Wings\b/, 'Wings']
 		]
 	},
 	{ cat: 'torso', kinds: [[/^Minifig Torso\b/]] },
 	// Complete lower bodies: hips and legs, skirts, ghost hips...
-	{ cat: 'legs', kinds: [[/^Minifig Hips\b/]] },
+	{ cat: 'legs', kinds: [[/^Minifig (Hips|Skirt)\b/]] },
 	{
 		// Up to two words before the noun ("Minifig Police Hat"), but not "... with Hat"
 		cat: 'headgear',
@@ -48,7 +61,10 @@ const GROUPS = [
 			[/^Minifig ((?!with\b)\S+ ){0,2}Helmet\b/, 'Helmet'],
 			[/^Minifig ((?!with\b)\S+ ){0,2}Hood\b/, 'Hood'],
 			[/^Minifig ((?!with\b)\S+ ){0,2}(Hat|Crown|Tiara|Turban|Bonnet|Beret)\b/, 'Hat'],
-			[/^Minifig ((?!with\b)\S+ ){0,2}(Headdress|Headphones|Headset)\b/, 'Headdress']
+			[/^Minifig ((?!with\b)\S+ ){0,2}(Headdress|Headphones|Headset)\b/, 'Headdress'],
+			[/^Minifig (Kufi|Cloth Wrap)\b/, 'Hat'],
+			// Animal and costume masks worn over the head, not breathing masks
+			[/^Minifig Mask (?!.*\b(Oxygen|Breathing|Gas)\b)/, 'Mask']
 		]
 	},
 	{
@@ -59,7 +75,10 @@ const GROUPS = [
 				/^Minifig (Sword|Axe|Battleaxe|Weapon|Gun|Spear|Pike|Lance|Polearm|Dagger|Knife|Knifes|Bow|Crossbow|Whip|Flail|Scythe|Blade|Bladed|Lightsaber|Harpoon|Speargun|Machete|Tomahawk|Chakram|Boomerang|Slingshot|Kendo)\b/,
 				'Weapon'
 			],
+			[/^Minifig (Machine Gun|Long Bow|Cleaver|Ice Axe)\b/, 'Weapon'],
 			[/^Minifig Shield\b/, 'Shield'],
+			[/^Minifig (Circular Blade Saw)\b/, 'Tool'],
+			[/^Minifig (Cheerleader Pom|Conical Flask)\b/, 'Gear'],
 			[
 				/^Minifig (Tool|Shovel|Pickaxe|Jackhammer|Hose|Broom|Mop|Pushbroom|Brush|Paint|Welding|Chainsaw|Sledgehammer|Pitchfork|Oar|Ladle|Frypan|Saucepan|Utensil|Cutlery|Whisk|Plunger|Spray|Watering|Syringe|Keys?|Handcuffs|Comb|Hairbrush|Fishing|Hockey|Baseball Bat|Bat|Tennis|Ski Pole|Crutch|Lasso)\b/,
 				'Tool'
@@ -146,9 +165,12 @@ const BODY = ['3818.dat', '3819.dat', '3820.dat', '3815.dat', '3816.dat', '3817.
 
 // --- library access -------------------------------------------------------
 
+// Keys are paths in the official library, or "unf/..." in the unofficial one
 const texts = new Map();
+const fileOf = (key) =>
+	key.startsWith('unf/') ? path.join(UNOFFICIAL, key.slice(4)) : path.join(LDRAW, key);
 function read(key) {
-	if (!texts.has(key)) texts.set(key, fs.readFileSync(path.join(LDRAW, key), 'utf8'));
+	if (!texts.has(key)) texts.set(key, fs.readFileSync(fileOf(key), 'utf8'));
 	return texts.get(key);
 }
 
@@ -160,11 +182,17 @@ function resolve(ref) {
 	const rel = ref.toLowerCase().replaceAll('\\', '/');
 	if (resolved.has(rel)) return resolved.get(rel);
 	let hit = null;
-	for (const dir of ['parts', 'p']) {
-		if (fs.existsSync(path.join(LDRAW, dir, rel))) {
-			const name = rel.startsWith('s/') ? `parts/${rel}` : rel.startsWith('48/') ? `p/${rel}` : rel;
-			hit = { key: `${dir}/${rel}`, name };
-			break;
+	search: for (const root of ROOTS) {
+		for (const dir of ['parts', 'p']) {
+			if (fs.existsSync(path.join(root.dir, dir, rel))) {
+				const name = rel.startsWith('s/')
+					? `parts/${rel}`
+					: rel.startsWith('48/')
+						? `p/${rel}`
+						: rel;
+				hit = { key: `${root.prefix}${dir}/${rel}`, name };
+				break search;
+			}
 		}
 	}
 	resolved.set(rel, hit);
@@ -216,12 +244,15 @@ function refsOf(text) {
 	return refs;
 }
 
-// Every file a part needs, by canonical name
+// Every file a part needs, by canonical name. `missing` counts the references
+// found nowhere: the part would show up with holes.
 function closure(name) {
 	const seen = new Map();
+	seen.missing = 0;
 	const stack = [name];
 	while (stack.length) {
 		const r = resolve(stack.pop());
+		if (!r) seen.missing++;
 		if (!r || seen.has(r.name)) continue;
 		seen.set(r.name, r.key);
 		stack.push(...refsOf(read(r.key)));
@@ -251,19 +282,39 @@ const pack = (names, closures) =>
 // --- select parts ---------------------------------------------------------
 
 const parts = [];
-for (const file of fs.readdirSync(path.join(LDRAW, 'parts'))) {
-	if (!file.endsWith('.dat')) continue;
-	const desc = header(read(`parts/${file}`));
-	if (/^[~=_|]/.test(desc) || /obsolete|moved to/i.test(desc)) continue;
-	const group = classify(desc);
-	if (!group) continue;
-	const deps = closure(file);
-	// LDrawLoader does not support textures
-	if ([...deps.values()].some((k) => /!TEXMAP|!DATA/.test(read(k)))) continue;
-	parts.push({ file, desc, cat: group.cat, kind: group.kind, deps });
+let skipped = 0;
+const official = new Set(fs.readdirSync(path.join(LDRAW, 'parts')));
+for (const root of ROOTS) {
+	for (const file of fs.readdirSync(path.join(root.dir, 'parts'))) {
+		if (!file.endsWith('.dat')) continue;
+		// Unofficial updates of official parts: the official version is kept
+		if (root.prefix && official.has(file)) continue;
+		const key = `${root.prefix}parts/${file}`;
+		const desc = header(read(key));
+		if (/^[~=_|]/.test(desc) || /obsolete|moved to/i.test(desc)) continue;
+		const group = classify(desc);
+		if (!group) continue;
+		// The file found for this name must be this one (official first)
+		if (resolve(file)?.key !== key) continue;
+		const deps = closure(file);
+		// LDrawLoader does not support textures; incomplete parts would have holes
+		if (deps.missing || [...deps.values()].some((k) => /!TEXMAP|!DATA/.test(read(k)))) {
+			skipped++;
+			continue;
+		}
+		const unofficial = [...deps.values()].some((k) => k.startsWith('unf/'));
+		parts.push({ file, key, desc, cat: group.cat, kind: group.kind, deps, unofficial });
+	}
 }
-for (const file of BODY)
-	parts.push({ file, desc: header(read(`parts/${file}`)), cat: 'body', deps: closure(file) });
+// Cloth parts come flat and "(Formed)" around the figure: only the formed one looks right
+const base = (desc) => desc.replace(/\s*\((Formed|Needs Work)\)/g, '');
+const formed = new Set(parts.filter((p) => /\(Formed\)/.test(p.desc)).map((p) => base(p.desc)));
+for (let i = parts.length - 1; i >= 0; i--)
+	if (!/\(Formed\)/.test(parts[i].desc) && formed.has(base(parts[i].desc))) parts.splice(i, 1);
+for (const file of BODY) {
+	const key = `parts/${file}`;
+	parts.push({ file, key, desc: header(read(key)), cat: 'body', deps: closure(file) });
+}
 
 const uses = new Map();
 for (const p of parts) for (const n of p.deps.keys()) uses.set(n, (uses.get(n) ?? 0) + 1);
@@ -305,7 +356,9 @@ for (const p of parts) {
 	fs.writeFileSync(path.join(OUT, 'p', `${id}.ldr`), text);
 	const entry = { id, name: p.desc.replace(/^Minifig /, ''), cat: p.cat };
 	if (p.kind) entry.kind = p.kind;
-	const source = read(`parts/${p.file}`);
+	const source = read(p.key);
+	// Still in review on the LDraw parts tracker (or made of parts that are)
+	if (p.unofficial) entry.unofficial = true;
 	const theme = themeOf(`${p.desc} ${keywordsOf(source)}`);
 	if (theme) entry.theme = theme;
 	const year = source.match(/^0 !LDRAW_ORG \S+ UPDATE (\d{4})/m)?.[1];
@@ -371,7 +424,8 @@ const credits = [...shipped].sort().map((n) => {
 fs.writeFileSync(
 	path.join(OUT, 'CREDITS.txt'),
 	[
-		'Parts from the LDraw.org Parts Library (https://library.ldraw.org).',
+		'Parts from the LDraw.org Parts Library (https://library.ldraw.org), and from',
+		'its Parts Tracker for the parts still in review (marked Unofficial_Part).',
 		'Licensed under CC BY 2.0 and/or CC BY 4.0, see CAreadme.txt.',
 		'Files are repackaged: blank lines removed and file references lower-cased.',
 		'Geometry is not modified.',
@@ -387,6 +441,7 @@ const count = (cat) => catalog.filter((c) => c.cat === cat).length;
 const coreSize = fs.statSync(path.join(OUT, 'core.ldr')).size;
 console.log(
 	`${count('head')} heads, ${count('headgear')} headgear, ${count('torso')} torsos, ${count('legs')} legs, ${count('neck')} neck, ${count('back')} back, ${count('hand')} hand` +
+		` (${catalog.filter((c) => c.unofficial).length} unofficial, ${skipped} skipped)` +
 		` | core ${core.length} files ${(coreSize / 1e6).toFixed(1)} MB` +
 		` | shared ${shared.length} files ${(sharedBytes / 1e6).toFixed(1)} MB` +
 		` | packs ${(bytes / 1e6).toFixed(1)} MB (avg ${(bytes / parts.length / 1e3).toFixed(0)} kB,` +

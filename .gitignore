@@ -24,6 +24,7 @@ vite.config.ts.timestamp-*
 
 # LDraw library and generated parts (npm run parts)
 /.ldraw
+/.ldraw-unofficial
 /static/ldraw
 /static/thumbs
 

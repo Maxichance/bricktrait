@@ -163,6 +163,15 @@ describe('minifig assembly', () => {
 		expect(ids(placements(f, undefined, undefined, tail))).not.toContain('3816');
 	});
 
+	it('slips skirts over standard hips and legs', () => {
+		const skirt: Part = { id: '24087', name: 'Skirt Ruffled', cat: 'legs' };
+		const f = figure();
+		f.legs = { id: skirt.id, color: 1, hips: 4 };
+		const list = placements(f, undefined, undefined, skirt);
+		expect(ids(list)).toEqual(expect.arrayContaining(['3815', '24087', '3816', '3817']));
+		expect(list.find((p) => p.id === '24087')!.color).toBe(4);
+	});
+
 	it('raises arms and spreads legs sideways', () => {
 		const f = figure();
 		const rest = placements(f);

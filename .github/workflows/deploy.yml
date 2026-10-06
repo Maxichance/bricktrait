@@ -27,21 +27,26 @@ jobs:
 
       - run: npm ci
 
-      # The LDraw library is ~150 MB, keep it between runs (refreshed monthly)
+      # The LDraw libraries (official ~150 MB, parts in review ~90 MB) are kept
+      # between runs, refreshed monthly
       - id: month
         run: echo "value=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v6
         with:
-          path: .ldraw
+          path: |
+            .ldraw
+            .ldraw-unofficial
           key: ldraw-${{ steps.month.outputs.value }}
 
       - run: npm run parts
 
-      # ~3,000 thumbnails take a few minutes to render: keep them while the rendering code is unchanged
+      # ~4,700 thumbnails take a few minutes to render: keep them while the
+      # rendering code is unchanged, and save again when parts are added
       - uses: actions/cache@v6
         with:
           path: static/thumbs
-          key: thumbs-${{ hashFiles('src/lib/scene.ts', 'src/lib/thumb-render.ts') }}
+          key: thumbs-${{ hashFiles('src/lib/scene.ts', 'src/lib/thumb-render.ts') }}-${{ hashFiles('static/ldraw/catalog.json') }}
+          restore-keys: thumbs-${{ hashFiles('src/lib/scene.ts', 'src/lib/thumb-render.ts') }}-
       - run: npm run thumbs
       - run: npm run lint
       - run: npm run check

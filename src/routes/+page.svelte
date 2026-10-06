@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { asset } from '$app/paths';
 	import {
-		hipsOnly,
+		needsLegs,
 		library,
 		shortName,
 		STANDARD_LEGS,
@@ -112,7 +112,7 @@
 		if (f.headgear.id) list.push(f.headgear.color);
 		if (f.torso.id) list.push(f.torso.color, ...(torso?.arms ? [] : [f.torso.arms, f.torso.hands]));
 		if (f.legs.id) list.push(f.legs.color);
-		if (f.legs.id === STANDARD_LEGS || hipsOnly(find(f.legs.id))) list.push(f.legs.hips);
+		if (f.legs.id === STANDARD_LEGS || needsLegs(find(f.legs.id))) list.push(f.legs.hips);
 		for (const s of [f.neck, f.back, f.handR, f.handL]) if (s.id) list.push(s.color);
 		return list;
 	});
@@ -140,7 +140,7 @@
 				];
 			case 'legs':
 				return [
-					...(f.legs.id === STANDARD_LEGS || hipsOnly(find(f.legs.id))
+					...(f.legs.id === STANDARD_LEGS || needsLegs(find(f.legs.id))
 						? [target(t('hips'), f.legs.hips, (c) => (f.legs.hips = c))]
 						: []),
 					target(t('legs'), f.legs.color, (c) => (f.legs.color = c))
