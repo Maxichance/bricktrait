@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	import type { Category, Color } from '#lib/ldraw.ts';
 	import Thumb from './Thumb.svelte';
 
@@ -32,7 +33,7 @@
 		type="button"
 		class="pick"
 		aria-pressed={active}
-		aria-label="{label}: {id ? fullName || name : 'empty'}"
+		aria-label="{label}: {id ? fullName || name : t('empty')}"
 		title={id ? fullName || name : undefined}
 		onclick={onselect}
 	>
@@ -52,14 +53,19 @@
 					<span class="mono">{id}</span>
 				</span>
 			{:else}
-				<span class="name none">Empty</span>
+				<span class="name none">{t('empty')}</span>
 			{/if}
 		</span>
 	</button>
 	{#if id}
-		<button type="button" class="remove" title="Remove {label.toLowerCase()}" onclick={onremove}>
+		<button
+			type="button"
+			class="remove"
+			title={t('remove', { slot: label.toLowerCase() })}
+			onclick={onremove}
+		>
 			<span aria-hidden="true">×</span>
-			<span class="sr-only">Remove {label.toLowerCase()}</span>
+			<span class="sr-only">{t('remove', { slot: label.toLowerCase() })}</span>
 		</button>
 	{/if}
 </div>

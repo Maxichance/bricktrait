@@ -2,6 +2,7 @@
 	import { renderer, webglAvailable } from '#lib/render.ts';
 	import { initial, portrait } from '#lib/state.svelte.ts';
 	import { MIN_ZOOM } from '#lib/scene.ts';
+	import { t } from '#lib/i18n.svelte.ts';
 
 	const SIZE = 640;
 	const webgl = webglAvailable();
@@ -94,7 +95,7 @@
 		width={SIZE}
 		height={SIZE}
 		tabindex="0"
-		aria-label="Portrait preview. Drag or use the arrow keys to turn, scroll to zoom, double click to reset."
+		aria-label={t('preview')}
 		onpointerdown={down}
 		onpointermove={move}
 		onpointerup={up}
@@ -104,17 +105,14 @@
 		ondblclick={() => (portrait.view = { ...initial.view })}
 	></canvas>
 	{#if !webgl}
-		<p class="notice" role="alert">
-			Your browser cannot draw 3D (WebGL is off or not supported). Try another browser, or turn on
-			hardware acceleration in its settings.
-		</p>
+		<p class="notice" role="alert">{t('noWebgl')}</p>
 	{:else if busy}
 		<span class="spinner" aria-label="Loading"></span>
 	{/if}
 	{#if error}
 		<p class="error" role="alert">
-			<span>Some parts did not load: {error}</span>
-			<button type="button" onclick={() => attempt++}>Retry</button>
+			<span>{t('partsFailed', { error })}</span>
+			<button type="button" onclick={() => attempt++}>{t('retry')}</button>
 		</p>
 	{/if}
 </div>

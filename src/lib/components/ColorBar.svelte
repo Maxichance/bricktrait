@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	import type { Color } from '#lib/ldraw.ts';
 	import { COMMON_COLORS } from '#lib/state.svelte.ts';
 
@@ -25,7 +26,7 @@
 <div class="bar">
 	<div class="head">
 		{#if targets.length > 1}
-			<div class="targets" role="tablist" aria-label="Colour of">
+			<div class="targets" role="tablist" aria-label={t('colourOf')}>
 				{#each targets as t, i (t.label)}
 					<button type="button" role="tab" aria-selected={t === target} onclick={() => (index = i)}>
 						<span class="dot" style:background={hex(t.value)}></span>{t.label}
@@ -40,10 +41,10 @@
 			<span class="mono code">#{target.value}</span>
 		</span>
 		<button type="button" class="more" aria-expanded={all} onclick={() => (all = !all)}>
-			{all ? 'Common colours' : `All ${opaque.length}`}
+			{all ? t('commonColours') : t('allColours', { n: opaque.length })}
 		</button>
 	</div>
-	<div class="list" class:all role="group" aria-label="{target.label} colour">
+	<div class="list" class:all role="group" aria-label="{t('colourOf')} {target.label}">
 		{#each shown as c (c.code)}
 			<button
 				type="button"
