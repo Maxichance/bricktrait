@@ -119,24 +119,33 @@
 	<div class="filters">
 		<label class="search">
 			<span class="sr-only">{t('searchLabel')}</span>
-			<svg viewBox="0 0 20 20" aria-hidden="true"
-				><circle cx="8.5" cy="8.5" r="5.5" /><path d="m13 13 4 4" /></svg
-			>
+			<svg viewBox="0 0 20 20" aria-hidden="true">
+				<circle cx="8.5" cy="8.5" r="5.5" />
+				<path d="m13 13 4 4" />
+			</svg>
 			<input type="search" placeholder={t('search')} bind:value={query} />
+			{#if query}
+				<button type="button" class="clear-btn" aria-label="Clear" onclick={() => (query = '')}
+					>×</button
+				>
+			{/if}
 		</label>
 		<div class="views" role="group" aria-label={t('all')}>
-			<button type="button" aria-pressed={view === 'all'} onclick={() => (view = 'all')}
-				>{t('all')}</button
-			>
+			<button type="button" aria-pressed={view === 'all'} onclick={() => (view = 'all')}>
+				{t('all')}
+			</button>
 			<button
 				type="button"
+				class="fav-btn"
 				aria-pressed={view === 'favourites'}
 				onclick={() => (view = 'favourites')}
-				><span aria-hidden="true">★</span> {t('favourites')}</button
 			>
-			<button type="button" aria-pressed={view === 'recent'} onclick={() => (view = 'recent')}
-				>{t('recent')}</button
-			>
+				<span class="star-icon" aria-hidden="true">★</span>
+				<span>{t('favourites')}</span>
+			</button>
+			<button type="button" aria-pressed={view === 'recent'} onclick={() => (view = 'recent')}>
+				{t('recent')}
+			</button>
 		</div>
 	</div>
 
@@ -171,11 +180,14 @@
 
 	{#if kinds.length > 1}
 		<div class="kinds" role="group" aria-label={t('type')}>
-			<button type="button" aria-pressed={!kind} onclick={() => (kind = '')}>{t('all')}</button>
+			<button type="button" aria-pressed={!kind} onclick={() => (kind = '')}>
+				<span>{t('all')}</span>
+			</button>
 			{#each kinds as [k, n] (k)}
-				<button type="button" aria-pressed={kind === k} onclick={() => (kind = k)}
-					>{tn(k)} <span class="n">{n}</span></button
-				>
+				<button type="button" aria-pressed={kind === k} onclick={() => (kind = k)}>
+					<span>{tn(k)}</span>
+					<span class="n">{n}</span>
+				</button>
 			{/each}
 		</div>
 	{/if}
@@ -195,7 +207,9 @@
 						onfocus={() => (focus = i)}
 						onclick={() => onpick(p.id)}
 					>
-						<Thumb id={p.id} {color} cat={p.cat} />
+						<div class="thumb-wrap">
+							<Thumb id={p.id} {color} cat={p.cat} />
+						</div>
 						<span class="name">{shortName(p.name)}</span>
 						<span class="id mono">{p.id}</span>
 					</button>
@@ -206,7 +220,10 @@
 						tabindex="-1"
 						title={fav ? t('unfavourite') : t('favourite')}
 						aria-label={fav ? t('unfavourite') : t('favourite')}
-						onclick={() => toggleFavourite(p.id)}>★</button
+						onclick={(e) => {
+							e.stopPropagation();
+							toggleFavourite(p.id);
+						}}>★</button
 					>
 				</div>
 			{/each}
@@ -214,35 +231,37 @@
 		{#if shown.length > limit}
 			<div bind:this={sentinel} class="sentinel"></div>
 		{:else if !shown.length}
-			<p class="nothing">
-				{view === 'favourites' && !query
-					? t('noFavourites')
-					: view === 'recent' && !query
-						? t('noRecent')
-						: t('nothing')}
-			</p>
+			<div class="empty-state">
+				<p class="nothing">
+					{view === 'favourites' && !query
+						? t('noFavourites')
+						: view === 'recent' && !query
+							? t('noRecent')
+							: t('nothing')}
+				</p>
+			</div>
 		{/if}
 	</div>
 </div>
 
 <style>
-	/* Filters stay put, only the grid scrolls */
 	.picker {
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
+		gap: 12px;
 		min-height: 0;
 		height: 100%;
 	}
+
 	.scroll {
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
-		margin: 0 -6px;
-		padding: 2px 6px 16px;
+		margin: 0 -4px;
+		padding: 2px 4px 20px;
 		scrollbar-width: thin;
-		scrollbar-color: var(--line) transparent;
 	}
+
 	.filters,
 	.row {
 		display: flex;
@@ -250,89 +269,151 @@
 		align-items: center;
 		gap: 8px;
 	}
+
 	.search {
 		position: relative;
 		flex: 1;
 		min-width: 200px;
 	}
+
 	.search svg {
 		position: absolute;
-		left: 11px;
+		left: 12px;
 		top: 50%;
-		width: 16px;
-		height: 16px;
-		translate: 0 -50%;
+		width: 15px;
+		height: 15px;
+		transform: translateY(-50%);
 		fill: none;
 		stroke: var(--muted);
-		stroke-width: 2;
+		stroke-width: 2.2;
 		stroke-linecap: round;
+		stroke-linejoin: round;
+		pointer-events: none;
 	}
+
 	input[type='search'],
 	select {
 		height: 36px;
-		background: var(--card);
-		border: 1.5px solid var(--line);
-		border-radius: var(--radius);
+		background: rgba(0, 0, 0, 0.35);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sm);
+		color: var(--ink);
+		font-size: 0.86rem;
+		transition:
+			border-color 0.15s,
+			box-shadow 0.15s;
 	}
+
 	input[type='search'] {
 		width: 100%;
-		padding: 0 12px 0 34px;
+		padding: 0 32px 0 36px;
 	}
+
+	.clear-btn {
+		position: absolute;
+		right: 8px;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 20px;
+		height: 20px;
+		display: grid;
+		place-items: center;
+		color: var(--muted);
+		font-size: 1.1rem;
+		line-height: 1;
+		border-radius: 50%;
+		transition: color 0.12s;
+	}
+	.clear-btn:hover {
+		color: var(--ink);
+	}
+
 	select {
 		max-width: 100%;
 		height: 32px;
-		padding: 0 6px;
-		font-size: 0.84rem;
+		padding: 0 10px;
+		font-size: 0.82rem;
+		font-weight: 500;
 		cursor: pointer;
+		background-color: var(--card);
 	}
+
 	.select {
 		min-width: 0;
 	}
+
 	input:focus,
 	select:focus {
-		border-color: var(--ink);
+		border-color: var(--yellow);
 		outline: none;
+		box-shadow: 0 0 0 1px var(--yellow);
 	}
+
 	.count {
 		margin-left: auto;
 		color: var(--muted);
+		font-size: 0.76rem;
 		white-space: nowrap;
 	}
+
 	.views {
 		display: flex;
-		gap: 2px;
-		padding: 2px;
-		border-radius: var(--radius);
-		background: var(--sunk);
+		gap: 3px;
+		padding: 3px;
+		border-radius: var(--radius-sm);
+		background: rgba(0, 0, 0, 0.35);
+		border: 1px solid var(--line);
 	}
+
 	.views button {
-		height: 32px;
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		height: 30px;
 		padding: 0 12px;
 		border: 0;
 		border-radius: 4px;
 		background: none;
 		color: var(--ink-2);
-		font-size: 0.84rem;
+		font-size: 0.82rem;
 		font-weight: 600;
 		white-space: nowrap;
+		transition: all 0.14s ease;
 	}
+
+	.views button:hover {
+		color: #ffffff;
+	}
+
 	.views button[aria-pressed='true'] {
-		background: var(--card);
-		color: var(--ink);
-		box-shadow: 0 0 0 1.5px var(--ink);
+		background: var(--card-hover);
+		color: #ffffff;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 	}
+
+	.fav-btn[aria-pressed='true'] .star-icon {
+		color: var(--yellow);
+	}
+
 	.check {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		font-size: 0.84rem;
+		gap: 7px;
+		font-size: 0.82rem;
+		font-weight: 500;
 		cursor: pointer;
 		white-space: nowrap;
+		color: var(--ink-2);
 	}
+
 	.check input {
-		accent-color: var(--ink);
+		accent-color: var(--yellow);
+		width: 15px;
+		height: 15px;
+		cursor: pointer;
 	}
-	/* Kinds: one line of chips, scrolled sideways when they do not fit */
+
+	/* Kinds Chips: Modern horizontal scrollable pills */
 	.kinds {
 		display: flex;
 		gap: 6px;
@@ -341,140 +422,208 @@
 		margin: 0 -2px;
 		padding: 2px;
 	}
+
 	.kinds::-webkit-scrollbar {
 		display: none;
 	}
+
 	.kinds button {
+		display: flex;
+		align-items: center;
+		gap: 5px;
 		flex: none;
 		height: 28px;
 		padding: 0 11px;
-		border: 1.5px solid var(--line);
+		border: 1px solid var(--line);
 		border-radius: 14px;
-		background: var(--card);
+		background: rgba(255, 255, 255, 0.03);
 		color: var(--ink-2);
 		font-weight: 600;
-		font-size: 0.82rem;
+		font-size: 0.78rem;
+		transition: all 0.14s ease;
 	}
+
 	.kinds button:hover {
-		border-color: var(--ink-2);
+		border-color: var(--line-focus);
+		color: var(--ink);
+		background: rgba(255, 255, 255, 0.06);
 	}
+
 	.kinds button[aria-pressed='true'] {
-		border-color: var(--ink);
-		background: var(--ink);
-		color: var(--paper);
+		border-color: rgba(255, 208, 0, 0.4);
+		background: rgba(255, 208, 0, 0.12);
+		color: var(--yellow);
 	}
+
 	.n {
-		opacity: 0.55;
+		opacity: 0.6;
+		font-size: 0.7rem;
 		font-weight: 500;
 	}
+
+	/* Parts Grid */
 	.grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
 		gap: 8px;
 	}
+
 	.item {
 		position: relative;
 	}
+
 	.pick {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 3px;
+		gap: 4px;
 		width: 100%;
 		height: 100%;
-		padding: 8px 6px 7px;
+		padding: 10px 6px 8px;
 		background: var(--card);
-		border: 1.5px solid transparent;
-		border-radius: var(--radius);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-md);
 		text-align: center;
+		transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 	}
-	.pick :global(.thumb) {
-		width: 82%;
+
+	.thumb-wrap {
+		width: 100%;
+		max-width: 68px;
+		aspect-ratio: 1;
+		display: grid;
+		place-items: center;
+		transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 	}
+
+	.pick:hover .thumb-wrap {
+		transform: scale(1.08) translateY(-2px);
+	}
+
 	.pick:hover {
-		border-color: var(--line);
+		border-color: var(--line-focus);
+		background: var(--card-hover);
+		transform: translateY(-2px);
+		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
 	}
+
 	.selected .pick {
-		background: #fff3c4;
-		border-color: var(--ink);
+		background: rgba(255, 208, 0, 0.08);
+		border-color: var(--yellow);
+		box-shadow:
+			0 0 0 1px var(--yellow),
+			0 0 16px var(--yellow-glow),
+			0 4px 12px rgba(0, 0, 0, 0.4);
+		transform: translateY(-1.5px);
 	}
+
 	.name {
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-		font-size: 0.74rem;
+		font-size: 0.72rem;
 		font-weight: 600;
-		line-height: 1.2;
+		line-height: 1.25;
 		color: var(--ink-2);
 		overflow-wrap: anywhere;
+		margin-top: 2px;
 	}
+
 	.id {
 		max-width: 100%;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		color: var(--muted);
-		font-size: 0.64rem;
+		font-size: 0.62rem;
+		opacity: 0.8;
 	}
+
 	.selected .name {
-		color: var(--ink);
+		color: #ffffff;
+		font-weight: 700;
 	}
+
 	.star {
 		position: absolute;
-		top: 3px;
-		right: 3px;
+		top: 4px;
+		right: 4px;
 		width: 24px;
 		height: 24px;
 		padding: 0;
 		border: 0;
-		border-radius: 4px;
-		background: none;
-		color: var(--line);
-		font-size: 1rem;
+		border-radius: 50%;
+		background: rgba(0, 0, 0, 0.4);
+		color: rgba(255, 255, 255, 0.3);
+		font-size: 0.95rem;
 		line-height: 1;
 		opacity: 0;
-		transition: opacity 0.12s;
+		transform: scale(0.85);
+		transition: all 0.14s ease;
+		display: grid;
+		place-items: center;
 	}
+
 	.item:hover .star,
 	.item:focus-within .star,
 	.star.on {
 		opacity: 1;
+		transform: scale(1);
 	}
+
 	@media (hover: none) {
 		.star {
 			opacity: 1;
+			transform: scale(1);
 		}
 	}
+
 	.star:hover {
-		color: var(--ink-2);
+		color: #ffffff;
+		transform: scale(1.15);
 	}
+
 	.star.on {
-		color: #e0a800;
+		color: var(--yellow);
+		background: rgba(0, 0, 0, 0.6);
+		text-shadow: 0 0 8px var(--yellow-glow);
 	}
+
 	.sentinel {
 		height: 1px;
 	}
+
+	.empty-state {
+		display: grid;
+		place-items: center;
+		padding: 32px 16px;
+	}
+
 	.nothing {
 		color: var(--muted);
-		margin: 24px 0;
+		font-size: 0.88rem;
+		text-align: center;
+		margin: 0;
 	}
+
 	@media (max-width: 520px) {
 		.grid {
-			grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+			grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
 			gap: 6px;
 		}
 		.pick {
-			padding: 6px 3px 6px;
+			padding: 8px 4px 6px;
 		}
-		.pick :global(.thumb) {
-			width: 90%;
+		.thumb-wrap {
+			max-width: 54px;
 		}
 		.name {
 			font-size: 0.68rem;
 		}
-		/* The part number stays in the tooltip */
 		.id {
 			display: none;
 		}

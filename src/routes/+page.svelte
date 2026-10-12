@@ -410,18 +410,23 @@
 <div class="app">
 	<header>
 		<a class="logo" href="./">
-			<svg class="brick" viewBox="0 0 40 28" aria-hidden="true">
-				<rect x="1" y="9" width="38" height="18" rx="2" />
-				<rect x="6" y="3" width="10" height="7" rx="1.5" />
-				<rect x="24" y="3" width="10" height="7" rx="1.5" />
-			</svg>
-			<span class="word">bricktrait</span>
+			<div class="brick-wrap">
+				<svg class="brick" viewBox="0 0 40 28" aria-hidden="true">
+					<rect x="1" y="9" width="38" height="18" rx="2" />
+					<rect x="6" y="3" width="10" height="7" rx="1.5" />
+					<rect x="24" y="3" width="10" height="7" rx="1.5" />
+				</svg>
+			</div>
+			<div class="brand">
+				<span class="word">bricktrait</span>
+				<span class="pro-tag">STUDIO</span>
+			</div>
 		</a>
 		<p class="tagline">{t('tagline')}</p>
 		<nav class="tools" aria-label={t('undo')}>
 			<button
 				type="button"
-				class="btn quiet"
+				class="btn quiet tool-btn"
 				onclick={undo}
 				disabled={!timeline.canUndo}
 				title="{t('undo')} (Ctrl+Z)"
@@ -431,7 +436,7 @@
 			</button>
 			<button
 				type="button"
-				class="btn quiet"
+				class="btn quiet tool-btn"
 				onclick={redo}
 				disabled={!timeline.canRedo}
 				title="{t('redo')} (Ctrl+Shift+Z)"
@@ -451,23 +456,39 @@
 					{/each}
 				</select>
 			</label>
-			<a class="btn quiet" href="https://github.com/Maxichance/bricktrait" title={t('star')}
-				>★<span class="text">GitHub</span></a
+			<a
+				class="btn quiet gh-link"
+				href="https://github.com/Maxichance/bricktrait"
+				title={t('star')}
 			>
+				<span class="star-icon">★</span>
+				<span class="text">GitHub</span>
+			</a>
+			<button
+				type="button"
+				class="btn primary header-download"
+				onclick={download}
+				disabled={!ready}
+			>
+				{@render icon('download')}
+				<span class="text">{t('download')}</span>
+			</button>
 		</nav>
 	</header>
 
 	<main class:compact>
 		<section class="stage" aria-label={t('preview')}>
 			<div class="view">
-				<Preview />
+				<div class="preview-frame">
+					<Preview />
+				</div>
 				<div class="float">
 					<button
 						type="button"
 						class="chip"
 						onclick={() => randomize(catalog)}
 						disabled={!ready}
-						title={t('random')}
+						title="{t('random')} (Space)"
 					>
 						{@render icon('dice')}<span class="sr-only">{t('random')}</span>
 					</button>
@@ -483,6 +504,9 @@
 					<button type="button" class="chip" onclick={resetView} title={t('resetView')}>
 						{@render icon('recenter')}<span class="sr-only">{t('resetView')}</span>
 					</button>
+				</div>
+				<div class="stage-hint">
+					<span>{t('cameraHint')}</span>
 				</div>
 			</div>
 
@@ -518,11 +542,11 @@
 								{/each}
 							</div>
 						</fieldset>
-						<button type="button" class="btn" onclick={copyImage} disabled={!ready}>
+						<button type="button" class="btn copy-btn" onclick={copyImage} disabled={!ready}>
 							{copiedImage ? t('imageCopied') : t('copyImage')}
 						</button>
 						{#if copyError}
-							<p class="muted">{t('copyFailed')}</p>
+							<p class="muted error-text">{t('copyFailed')}</p>
 						{/if}
 					</div>
 				</details>
@@ -589,7 +613,7 @@
 						{@const part = find(f.id)}
 						{#key active}
 							<div class="current">
-								<span class="label">{t(active)}</span>
+								<span class="badge label">{t(active)}</span>
 								{#if f.id}
 									<strong title={part?.name}>{shortName(part?.name ?? f.id)}</strong>
 									<span class="mono id">{f.id}</span>
@@ -790,9 +814,13 @@
 				<button type="button" class="link" onclick={startOver}>{t('startOver')}</button>
 				·
 				{#each pieces('credits') as p, i (i)}
-					{#if p.slot === 'ldraw'}<a href="https://www.ldraw.org">LDraw</a>
-					{:else if p.slot === 'ccby'}<a href="https://creativecommons.org/licenses/by/4.0/"
-							>CC BY</a
+					{#if p.slot === 'ldraw'}<a href="https://www.ldraw.org" target="_blank" rel="noreferrer"
+							>LDraw</a
+						>
+					{:else if p.slot === 'ccby'}<a
+							href="https://creativecommons.org/licenses/by/4.0/"
+							target="_blank"
+							rel="noreferrer">CC BY</a
 						>
 					{:else if p.slot === 'credits'}<a href={asset('ldraw/CREDITS.txt')}>{t('creditsLink')}</a>
 					{:else}{p.text}{/if}
@@ -804,8 +832,8 @@
 
 <style>
 	.app {
-		--header: 58px;
-		max-width: 1680px;
+		--header: 62px;
+		max-width: 1720px;
 		margin: 0 auto;
 		padding: 0 24px;
 	}
@@ -814,65 +842,128 @@
 	header {
 		display: flex;
 		align-items: center;
-		gap: 16px;
+		gap: 18px;
 		height: var(--header);
-		border-bottom: 1.5px solid var(--ink);
+		border-bottom: 1px solid var(--line);
 	}
+
 	.logo {
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: 12px;
 		text-decoration: none;
 	}
+
+	.brick-wrap {
+		display: grid;
+		place-items: center;
+		width: 38px;
+		height: 38px;
+		background: rgba(229, 37, 33, 0.12);
+		border: 1px solid rgba(229, 37, 33, 0.35);
+		border-radius: 9px;
+		transition: transform 0.16s ease;
+	}
+	.logo:hover .brick-wrap {
+		transform: rotate(-6deg) scale(1.05);
+	}
+
 	.brick {
-		width: 32px;
+		width: 26px;
 		fill: var(--red);
-		stroke: var(--ink);
-		stroke-width: 1.5;
+		stroke: rgba(255, 255, 255, 0.3);
+		stroke-width: 1.2;
 	}
+
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
 	.word {
-		font-weight: 800;
-		font-size: 1.35rem;
-		letter-spacing: -0.03em;
+		font-weight: 850;
+		font-size: 1.4rem;
+		letter-spacing: -0.04em;
+		color: #ffffff;
 	}
+
+	.pro-tag {
+		font-size: 0.62rem;
+		font-weight: 800;
+		letter-spacing: 0.12em;
+		padding: 2px 6px;
+		border-radius: 4px;
+		background: rgba(255, 208, 0, 0.16);
+		color: var(--yellow);
+		border: 1px solid rgba(255, 208, 0, 0.3);
+	}
+
 	.tagline {
 		margin: 0;
 		padding-left: 16px;
-		border-left: 1.5px solid var(--line);
+		border-left: 1px solid var(--line);
 		color: var(--ink-2);
-		font-size: 0.9rem;
+		font-size: 0.88rem;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		min-width: 0;
 	}
+
 	.tools {
 		display: flex;
 		align-items: center;
-		gap: 2px;
+		gap: 6px;
 		margin-left: auto;
 	}
-	.tools a {
-		text-decoration: none;
+
+	.tool-btn {
+		height: 34px;
+		padding: 0 10px;
 	}
+
 	.sep {
-		width: 1.5px;
+		width: 1px;
 		height: 20px;
-		margin: 0 6px;
+		margin: 0 4px;
 		background: var(--line);
 	}
+
 	.lang select {
 		height: 34px;
-		padding: 0 6px;
-		border: 0;
-		border-radius: var(--radius);
-		background: none;
+		padding: 0 10px;
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sm);
+		background: var(--card);
 		color: var(--ink-2);
 		font-weight: 600;
+		font-size: 0.82rem;
 		cursor: pointer;
+		transition:
+			border-color 0.14s,
+			color 0.14s;
 	}
 	.lang select:hover {
-		background: var(--sunk);
+		border-color: var(--line-focus);
+		color: var(--ink);
+	}
+
+	.gh-link {
+		height: 34px;
+		padding: 0 12px;
+		gap: 6px;
+	}
+	.star-icon {
+		color: var(--yellow);
+		font-size: 1rem;
+	}
+
+	.header-download {
+		height: 34px;
+		padding: 0 14px;
+		font-size: 0.82rem;
+		margin-left: 4px;
 	}
 
 	svg {
@@ -881,7 +972,7 @@
 		flex: none;
 		fill: none;
 		stroke: currentColor;
-		stroke-width: 1.7;
+		stroke-width: 1.8;
 		stroke-linecap: round;
 		stroke-linejoin: round;
 	}
@@ -890,62 +981,98 @@
 		stroke: none;
 	}
 
-	/* --- stage: the portrait and how to get it out ---------------------- */
+	/* --- stage: the portrait and tools ---------------------------------- */
 	main {
 		display: grid;
 		gap: 16px;
 		padding: 16px 0;
 	}
+
 	.view {
 		position: relative;
+		border-radius: var(--radius-lg);
+		background: var(--bg-stage);
+		border: 1px solid var(--line);
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+		overflow: hidden;
 	}
+
+	.preview-frame {
+		width: 100%;
+		aspect-ratio: 1;
+	}
+
 	.float {
 		position: absolute;
-		top: 10px;
-		right: 10px;
+		top: 12px;
+		right: 12px;
 		display: flex;
-		gap: 6px;
+		gap: 8px;
+		z-index: 5;
 	}
+
 	.chip {
 		display: grid;
 		place-items: center;
-		width: 36px;
-		height: 36px;
+		width: 38px;
+		height: 38px;
 		padding: 0;
-		border: 1px solid rgb(255 255 255 / 0.18);
+		border: 1px solid rgba(255, 255, 255, 0.14);
 		border-radius: 50%;
-		background: rgb(10 10 20 / 0.55);
-		color: #fff;
-		backdrop-filter: blur(6px);
-		transition: background 0.12s;
+		background: rgba(15, 18, 28, 0.7);
+		color: #ffffff;
+		backdrop-filter: blur(12px);
+		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+		transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 	}
 	.chip:hover:not(:disabled) {
-		background: rgb(10 10 20 / 0.85);
+		background: rgba(30, 36, 56, 0.95);
+		border-color: rgba(255, 255, 255, 0.3);
+		transform: translateY(-2px) scale(1.05);
+		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
 	}
 	.chip:disabled {
-		opacity: 0.4;
+		opacity: 0.35;
 	}
+
+	.stage-hint {
+		padding: 8px 14px;
+		text-align: center;
+		font-size: 0.75rem;
+		color: var(--muted);
+		border-top: 1px solid rgba(255, 255, 255, 0.05);
+		background: rgba(0, 0, 0, 0.2);
+	}
+
 	.export {
 		position: relative;
 		display: flex;
 		margin-top: 12px;
+		box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+		border-radius: var(--radius);
 	}
+
 	.export > .primary {
 		flex: 1;
 		justify-content: center;
-		height: 46px;
-		font-size: 1.02rem;
+		height: 48px;
+		font-size: 0.96rem;
+		font-weight: 700;
 		border-top-right-radius: 0;
 		border-bottom-right-radius: 0;
 	}
+
 	.fmt {
-		opacity: 0.65;
-		font-weight: 500;
+		opacity: 0.75;
+		font-weight: 600;
+		font-size: 0.8rem;
+		margin-left: 4px;
 	}
+
 	.menu summary {
 		list-style: none;
-		width: 44px;
-		height: 46px;
+		width: 46px;
+		height: 48px;
 		padding: 0;
 		justify-content: center;
 		border-left: 0;
@@ -957,22 +1084,24 @@
 		display: none;
 	}
 	.menu[open] summary svg {
-		rotate: 180deg;
+		transform: rotate(180deg);
 	}
+
 	.popover {
 		position: absolute;
 		bottom: calc(100% + 10px);
 		left: 0;
 		right: 0;
-		z-index: 10;
+		z-index: 20;
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
-		padding: 14px;
+		gap: 14px;
+		padding: 16px;
 		background: var(--card);
-		border: 1.5px solid var(--ink);
-		border-radius: var(--radius);
-		box-shadow: 4px 4px 0 var(--ink);
+		border: 1px solid var(--line-focus);
+		border-radius: var(--radius-md);
+		box-shadow: var(--shadow-lg);
+		backdrop-filter: blur(16px);
 	}
 	.popover fieldset {
 		border: 0;
@@ -980,10 +1109,17 @@
 		padding: 0;
 	}
 	.popover legend {
-		margin-bottom: 6px;
+		margin-bottom: 8px;
 	}
-	.popover .btn {
+	.popover .copy-btn {
 		justify-content: center;
+		height: 36px;
+	}
+	.error-text {
+		color: var(--red);
+		font-size: 0.82rem;
+		margin: 0;
+		text-align: center;
 	}
 
 	/* --- panel: what is being edited ------------------------------------ */
@@ -992,16 +1128,19 @@
 		flex-direction: column;
 		min-width: 0;
 		background: var(--card);
-		border: 1.5px solid var(--ink);
-		border-radius: 10px;
+		border: 1px solid var(--line);
+		border-radius: var(--radius-lg);
 		container-type: inline-size;
+		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+		overflow: hidden;
 	}
+
 	.modes {
 		display: flex;
-		padding: 0 8px;
-		border-bottom: 1.5px solid var(--ink);
-		background: var(--card);
-		border-radius: 10px 10px 0 0;
+		padding: 4px 6px;
+		border-bottom: 1px solid var(--line);
+		background: rgba(0, 0, 0, 0.25);
+		gap: 4px;
 	}
 	.modes button {
 		display: flex;
@@ -1009,23 +1148,28 @@
 		justify-content: center;
 		gap: 8px;
 		flex: 1;
-		height: 50px;
-		margin-bottom: -1.5px;
+		height: 44px;
 		border: 0;
-		border-bottom: 3px solid transparent;
+		border-radius: var(--radius-sm);
 		background: none;
-		color: var(--muted);
+		color: var(--ink-2);
 		font-weight: 700;
-		font-size: 0.92rem;
-		transition: color 0.12s;
+		font-size: 0.88rem;
+		transition: all 0.15s ease;
 	}
 	.modes button:hover {
-		color: var(--ink);
+		color: #ffffff;
+		background: rgba(255, 255, 255, 0.05);
 	}
 	.modes button[aria-selected='true'] {
-		color: var(--ink);
-		border-bottom-color: var(--yellow);
+		color: #ffffff;
+		background: var(--card-hover);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 	}
+	.modes button[aria-selected='true'] svg {
+		color: var(--yellow);
+	}
+
 	.body {
 		display: flex;
 		flex-direction: column;
@@ -1040,16 +1184,28 @@
 		grid-template-columns: repeat(8, minmax(0, 1fr));
 		gap: 8px;
 	}
+
 	.current {
 		display: flex;
 		flex-wrap: wrap;
-		align-items: baseline;
-		gap: 4px 10px;
-		margin-bottom: -6px;
+		align-items: center;
+		gap: 6px 10px;
+		padding: 8px 12px;
+		border-radius: 8px;
+		background: rgba(255, 255, 255, 0.03);
+		border: 1px solid rgba(255, 255, 255, 0.05);
+	}
+	.badge {
+		padding: 2px 8px;
+		border-radius: 4px;
+		background: rgba(255, 208, 0, 0.12);
+		color: var(--yellow);
+		font-size: 0.68rem;
 	}
 	.current strong {
-		font-size: 1.08rem;
+		font-size: 0.98rem;
 		letter-spacing: -0.01em;
+		color: #ffffff;
 	}
 	.current .none {
 		color: var(--muted);
@@ -1057,37 +1213,43 @@
 	}
 	.current .id {
 		color: var(--muted);
+		font-size: 0.76rem;
 	}
 	.hint {
 		flex-basis: 100%;
+		font-size: 0.78rem;
 	}
+
 	.colors {
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
 		padding: 12px 14px;
-		border-radius: var(--radius);
-		background: var(--paper);
+		border-radius: var(--radius-md);
+		background: rgba(0, 0, 0, 0.25);
+		border: 1px solid var(--line);
 	}
+
 	.catalogue {
 		flex: 1;
 		min-height: 0;
 	}
 
-	/* Sliders: one grid per group so labels of any length line up */
+	/* Sliders */
 	.ranges {
 		display: grid;
 		grid-template-columns: max-content minmax(0, 1fr) 58px;
 		align-items: center;
 		gap: 10px 14px;
-		font-size: 0.9rem;
+		font-size: 0.88rem;
 	}
 	.range {
 		display: contents;
 	}
 	.range input {
 		width: 100%;
-		accent-color: var(--ink);
+		accent-color: var(--yellow);
+		cursor: pointer;
 	}
 	.spin {
 		display: grid;
@@ -1097,22 +1259,27 @@
 		font-size: 0.88rem;
 	}
 	.val {
-		height: 26px;
-		padding: 0 4px;
-		border: 0;
-		border-radius: 4px;
-		background: none;
+		height: 28px;
+		padding: 0 6px;
+		border: 1px solid var(--line);
+		border-radius: 5px;
+		background: rgba(0, 0, 0, 0.3);
 		text-align: right;
-		color: var(--ink-2);
+		color: var(--ink);
+		font-size: 0.82rem;
+		transition: all 0.12s ease;
 	}
 	button.val:not(:disabled):hover {
-		background: var(--sunk);
-		color: var(--ink);
+		background: var(--card-hover);
+		border-color: var(--line-focus);
+		color: var(--yellow);
 	}
 	button.val:disabled {
 		cursor: default;
 		color: var(--muted);
+		opacity: 0.5;
 	}
+
 	.group {
 		display: flex;
 		flex-direction: column;
@@ -1120,18 +1287,21 @@
 		min-width: 0;
 		margin: 0;
 		padding: 14px 16px 16px;
-		border: 1.5px solid var(--line);
-		border-radius: var(--radius);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-md);
+		background: rgba(0, 0, 0, 0.2);
 	}
 	.group legend {
-		padding: 0 6px;
-		margin-left: -6px;
+		padding: 0 8px;
+		margin-left: -4px;
 	}
+
 	.groups {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 		gap: 12px;
 	}
+
 	.presets {
 		display: flex;
 		flex-wrap: wrap;
@@ -1140,22 +1310,25 @@
 	.preset {
 		height: 36px;
 		padding: 0 16px;
-		border: 1.5px solid var(--ink);
+		border: 1px solid var(--line);
 		border-radius: 18px;
 		background: var(--card);
+		color: var(--ink);
 		font-weight: 600;
-		box-shadow: 2px 2px 0 var(--ink);
-		transition:
-			transform 0.08s,
-			box-shadow 0.08s;
+		font-size: 0.86rem;
+		transition: all 0.14s ease;
+		box-shadow: var(--shadow-sm);
 	}
 	.preset:hover {
-		background: #fff3c4;
+		border-color: rgba(255, 208, 0, 0.5);
+		background: rgba(255, 208, 0, 0.1);
+		color: var(--yellow);
+		transform: translateY(-1px);
 	}
 	.preset:active {
-		transform: translate(2px, 2px);
-		box-shadow: none;
+		transform: translateY(0);
 	}
+
 	.advanced summary {
 		display: flex;
 		flex-wrap: wrap;
@@ -1164,73 +1337,89 @@
 		padding: 10px 0;
 		cursor: pointer;
 		list-style: none;
+		color: var(--ink);
 	}
 	.advanced summary::-webkit-details-marker {
 		display: none;
 	}
 	.advanced summary::before {
 		content: '▸';
-		transition: rotate 0.15s;
+		transition: transform 0.15s;
+		color: var(--muted);
 	}
 	.advanced[open] summary::before {
-		rotate: 90deg;
+		transform: rotate(90deg);
+		color: var(--yellow);
 	}
 	.advanced .title {
 		font-weight: 700;
 	}
 
-	/* Segmented choice: the ink shows through the gaps as separators, and
-	   the options wrap on a second line rather than being cut */
+	/* Segmented choices */
 	.seg {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 1.5px;
-		border: 1.5px solid var(--ink);
-		border-radius: var(--radius);
-		background: var(--ink);
-		overflow: hidden;
+		gap: 2px;
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sm);
+		background: rgba(0, 0, 0, 0.4);
+		padding: 3px;
 	}
 	.seg button {
 		flex: 1 1 82px;
 		min-width: 0;
-		height: 36px;
-		padding: 0 8px;
+		height: 34px;
+		padding: 0 10px;
 		border: 0;
-		background: var(--card);
+		border-radius: 4px;
+		background: none;
+		color: var(--ink-2);
 		font-weight: 600;
-		font-size: 0.86rem;
+		font-size: 0.84rem;
 		white-space: nowrap;
+		transition: all 0.14s ease;
 	}
 	.seg button:hover:not([aria-pressed='true']) {
-		background: #fff3c4;
+		color: #ffffff;
+		background: rgba(255, 255, 255, 0.05);
 	}
 	.seg button[aria-pressed='true'] {
-		background: var(--ink);
-		color: var(--paper);
+		background: var(--card-hover);
+		color: #ffffff;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 	}
 	.seg.small button {
 		flex: 0 0 auto;
 		height: 30px;
 		padding: 0 14px;
 	}
+
 	.rings {
 		display: flex;
 		align-items: center;
 		gap: 8px;
 	}
 	.ringdot {
-		width: 26px;
-		height: 26px;
+		width: 28px;
+		height: 28px;
 		padding: 0;
-		border: 5px solid var(--c);
+		border: 4px solid var(--c);
 		border-radius: 50%;
-		background: #0b0b14;
+		background: #0b0d14;
+		cursor: pointer;
+		transition: transform 0.12s ease;
+	}
+	.ringdot:hover {
+		transform: scale(1.15);
 	}
 	.ringdot[aria-pressed='true'] {
 		box-shadow:
 			0 0 0 2px var(--card),
-			0 0 0 3.5px var(--ink);
+			0 0 0 4px var(--c),
+			0 0 12px var(--c);
+		transform: scale(1.1);
 	}
+
 	.upload {
 		position: relative;
 		cursor: pointer;
@@ -1241,13 +1430,15 @@
 		opacity: 0;
 		cursor: pointer;
 	}
+
 	.row {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 10px 18px;
-		font-size: 0.9rem;
+		gap: 12px 20px;
+		font-size: 0.88rem;
 	}
+
 	.color,
 	.check {
 		display: flex;
@@ -1255,12 +1446,13 @@
 		gap: 8px;
 		cursor: pointer;
 	}
+
 	input[type='color'] {
 		width: 32px;
 		height: 32px;
 		padding: 0;
-		border: 1.5px solid var(--ink);
-		border-radius: 4px;
+		border: 1px solid var(--line);
+		border-radius: 6px;
 		background: none;
 		cursor: pointer;
 	}
@@ -1269,18 +1461,21 @@
 	}
 	input[type='color']::-webkit-color-swatch {
 		border: 0;
-		border-radius: 2px;
-	}
-	.check input {
-		accent-color: var(--ink);
-		width: 17px;
-		height: 17px;
+		border-radius: 4px;
 	}
 
+	.check input {
+		accent-color: var(--yellow);
+		width: 17px;
+		height: 17px;
+		cursor: pointer;
+	}
+
+	/* --- footer --------------------------------------------------------- */
 	footer {
 		color: var(--muted);
-		font-size: 0.74rem;
-		line-height: 1.5;
+		font-size: 0.76rem;
+		line-height: 1.6;
 	}
 	footer p {
 		margin: 0 0 4px;
@@ -1294,16 +1489,30 @@
 		font-weight: 600;
 		text-decoration: underline;
 		text-underline-offset: 3px;
+		cursor: pointer;
 	}
+	.link:hover {
+		color: var(--yellow);
+	}
+	footer a {
+		color: var(--ink-2);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+	footer a:hover {
+		color: var(--yellow);
+	}
+
 	.muted {
 		color: var(--muted);
-		font-size: 0.85rem;
+		font-size: 0.82rem;
 		margin: 0;
 	}
 	.error {
 		color: var(--red);
 		margin: 0;
 	}
+
 	.state {
 		display: flex;
 		flex-direction: column;
@@ -1316,19 +1525,20 @@
 	.bar {
 		width: 100%;
 		height: 8px;
-		border: 1.5px solid var(--ink);
+		border: 1px solid var(--line);
 		border-radius: 4px;
-		background: var(--card);
+		background: rgba(0, 0, 0, 0.4);
 		overflow: hidden;
 	}
 	.bar span {
 		display: block;
 		height: 100%;
 		background: var(--yellow);
+		box-shadow: 0 0 10px var(--yellow-glow);
 		transition: width 0.2s;
 	}
 
-	/* Narrow panel: slots on two rows, mode icons only when really tight */
+	/* --- responsive rules ----------------------------------------------- */
 	@container (max-width: 620px) {
 		.slots {
 			grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1348,8 +1558,7 @@
 		}
 	}
 
-	/* --- desktop and landscape tablets: an app, not a page --------------- */
-	/* The portrait takes all the height it can, the panel scrolls inside. */
+	/* Desktop layout */
 	@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
 		.app {
 			display: flex;
@@ -1357,13 +1566,13 @@
 			height: 100dvh;
 		}
 		main {
-			--sv: clamp(300px, min(calc(100dvh - var(--header) - 160px), 44vw), 820px);
+			--sv: clamp(320px, min(calc(100dvh - var(--header) - 170px), 43vw), 800px);
 			flex: 1;
 			min-height: 0;
 			grid-template-columns: var(--sv) minmax(0, 1fr);
 			grid-template-rows: minmax(0, 1fr) auto;
-			gap: 14px 28px;
-			padding: 20px 0 16px;
+			gap: 16px 28px;
+			padding: 16px 0 14px;
 		}
 		.stage {
 			grid-column: 1;
@@ -1381,48 +1590,26 @@
 		.body {
 			flex: 1;
 			overflow-y: auto;
-			scrollbar-width: thin;
-			scrollbar-color: var(--line) transparent;
 		}
-		/* The catalogue fills the rest, only its grid scrolls */
 		.body.parts {
 			overflow: hidden;
 			padding-bottom: 0;
 		}
 	}
+
 	@media (min-width: 900px) and (max-width: 1180px) and (min-aspect-ratio: 1/1) {
 		.tagline {
 			display: none;
 		}
 	}
-	/* Short desktop screens: everything a notch tighter so the catalogue shows */
-	@media (min-width: 900px) and (max-height: 860px) and (min-aspect-ratio: 1/1) {
-		.body {
-			gap: 12px;
-			padding: 14px 16px 16px;
-		}
-		.slots :global(.tile) {
-			max-width: 42px;
-		}
-		.slots :global(.pick) {
-			padding: 4px 3px 5px;
-		}
-		.colors {
-			padding: 10px 12px;
-		}
-		.modes button {
-			height: 44px;
-		}
-	}
+
 	@media (pointer: coarse) {
 		.keys {
 			display: none;
 		}
 	}
 
-	/* --- phone and small tablet: one column ------------------------------ */
-	/* The portrait and its buttons stick on top, the mode tabs right under. */
-	/* (also screens taller than wide: tablets held upright, half-screen windows) */
+	/* Mobile & small devices */
 	@media (max-width: 899px), (max-aspect-ratio: 999/1000) {
 		.app {
 			padding: 0 12px;
@@ -1430,9 +1617,12 @@
 		.tagline {
 			display: none;
 		}
+		.header-download {
+			display: none;
+		}
 		main {
-			--sv: min(52vw, 34dvh, 360px);
-			--stage-h: calc(var(--sv) + 20px);
+			--sv: min(54vw, 36dvh, 360px);
+			--stage-h: calc(var(--sv) + 24px);
 			gap: 0;
 			padding: 0 0 20px;
 		}
@@ -1447,9 +1637,11 @@
 			gap: 12px;
 			height: var(--stage-h);
 			padding: 10px 0;
-			background: var(--paper);
+			background: var(--bg-app);
 		}
-		/* Tools in a column next to the portrait: shortcuts on top, download at the bottom */
+		.stage-hint {
+			display: none;
+		}
 		.view {
 			position: static;
 			width: var(--sv);
@@ -1457,7 +1649,6 @@
 		.float {
 			top: 10px;
 			right: auto;
-			/* second grid column: centred grid of var(--sv) + 12px gap + 64px */
 			left: calc(50% + var(--sv) / 2 - 26px + 12px);
 			flex-direction: column;
 			gap: 6px;
@@ -1465,13 +1656,9 @@
 		.chip {
 			width: 40px;
 			height: 40px;
-			border: 1.5px solid var(--ink);
 			background: var(--card);
 			color: var(--ink);
 			backdrop-filter: none;
-		}
-		.chip:hover:not(:disabled) {
-			background: #fff3c4;
 		}
 		.export {
 			flex-direction: column;
@@ -1484,8 +1671,8 @@
 			width: 64px;
 			height: 64px;
 			padding: 0;
-			font-size: 0.7rem;
-			border-radius: var(--radius) var(--radius) 0 0;
+			font-size: 0.72rem;
+			border-radius: var(--radius-sm) var(--radius-sm) 0 0;
 		}
 		.export .text {
 			display: none;
@@ -1495,10 +1682,10 @@
 		}
 		.menu summary {
 			width: 64px;
-			height: 30px;
-			border-left: 1.5px solid var(--ink);
+			height: 32px;
+			border-left: 1px solid rgba(255, 255, 255, 0.2);
 			border-top: 0;
-			border-radius: 0 0 var(--radius) var(--radius);
+			border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 		}
 		.popover {
 			left: auto;
@@ -1511,27 +1698,23 @@
 			border: 0;
 			background: none;
 			border-radius: 0;
+			box-shadow: none;
 		}
 		.modes {
 			position: sticky;
 			top: var(--stage-h);
 			z-index: 3;
 			margin: 0 -12px;
-			padding: 0 4px;
-			background: var(--paper);
+			padding: 4px 8px;
+			background: var(--bg-app);
 			border-radius: 0;
-		}
-		.modes button {
-			height: 46px;
-			font-size: 0.86rem;
-			gap: 6px;
+			border-top: 1px solid var(--line);
 		}
 		.body {
 			padding: 14px 0 0;
 		}
-		/* Scrolled down: a smaller portrait, the download button only */
 		main.compact {
-			--sv: min(30vw, 19dvh, 170px);
+			--sv: min(32vw, 20dvh, 180px);
 		}
 		main.compact .float {
 			display: none;
@@ -1539,58 +1722,37 @@
 		main.compact .export > .primary {
 			height: 52px;
 		}
-		.preset {
-			height: 32px;
-			padding: 0 13px;
-			font-size: 0.88rem;
-		}
-		.colors {
-			background: var(--sunk);
-		}
-		/* Slots stay in reach under the tabs while the catalogue scrolls */
 		.slots {
 			position: sticky;
-			top: calc(var(--stage-h) + 46px);
+			top: calc(var(--stage-h) + 52px);
 			z-index: 2;
 			grid-template-columns: repeat(8, minmax(0, 1fr));
 			gap: 6px;
 			margin: -14px -12px 0;
 			padding: 10px 12px;
-			background: var(--paper);
-			border-bottom: 1.5px solid var(--line);
+			background: var(--bg-app);
+			border-bottom: 1px solid var(--line);
 		}
 		footer {
 			margin-top: 28px;
-			padding-top: 12px;
-			border-top: 1.5px solid var(--line);
+			padding-top: 14px;
+			border-top: 1px solid var(--line);
 		}
 		.tools .text {
 			display: none;
 		}
-		.tools .btn {
-			padding: 0 9px;
-		}
 		header {
-			height: 52px;
-			gap: 8px;
+			height: 54px;
+			gap: 10px;
 		}
 	}
+
 	@media (max-width: 560px) {
 		.slots :global(.label) {
 			display: none;
 		}
 		.slots :global(.pick) {
-			padding: 3px;
-		}
-		.slots :global(.empty .tile) {
-			width: 100%;
-			border: 0;
-		}
-		.slots :global(.remove) {
-			top: -6px;
-			right: -6px;
-			width: 18px;
-			height: 18px;
+			padding: 4px;
 		}
 	}
 	@media (max-width: 380px) {

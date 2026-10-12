@@ -2,22 +2,46 @@
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 
-/* Instruction booklet look: paper, ink, brick colours */
+/* LEGO Pro Studio Theme: Deep Slate, Glass Surfaces, Precision Lighting, Vibrant LEGO Accents */
 :root {
-	color-scheme: light;
-	--paper: #f3efe4;
-	--card: #fffdf6;
-	--sunk: #e9e4d6;
-	--ink: #1d1b17;
-	--ink-2: #4b473e;
-	--muted: #898375;
-	--line: #d8d1bf;
-	--yellow: #ffc815;
-	--red: #d6232c;
-	--blue: #1f5ef5;
-	--radius: 6px;
-	--font: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
-	--mono: 'IBM Plex Mono', ui-monospace, monospace;
+	color-scheme: dark;
+	--bg-app: #0b0d14;
+	--bg-stage: #06070b;
+	--paper: #0b0d14;
+	--card: #151824;
+	--card-hover: #1c2132;
+	--card-active: #22283c;
+	--sunk: #0f121b;
+	--ink: #f3f5fa;
+	--ink-2: #9ba3b8;
+	--muted: #64748b;
+	--line: rgba(255, 255, 255, 0.08);
+	--line-focus: rgba(255, 255, 255, 0.18);
+	--line-glow: rgba(255, 208, 0, 0.4);
+
+	/* Vibrant LEGO Palette */
+	--yellow: #ffd000;
+	--yellow-hover: #ffe033;
+	--yellow-glow: rgba(255, 208, 0, 0.25);
+	--red: #e52521;
+	--red-glow: rgba(229, 37, 33, 0.3);
+	--blue: #2563eb;
+	--blue-glow: rgba(37, 99, 235, 0.3);
+	--green: #10b981;
+
+	--radius-sm: 6px;
+	--radius: 10px;
+	--radius-md: 10px;
+	--radius-lg: 16px;
+	--radius-full: 9999px;
+
+	--font: 'Archivo Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	--mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+
+	--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+	--shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+	--shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.65);
+	--shadow-yellow: 0 0 20px rgba(255, 208, 0, 0.35);
 }
 
 * {
@@ -27,73 +51,120 @@
 html,
 body {
 	margin: 0;
-	background: var(--paper);
+	padding: 0;
+	background: var(--bg-app);
 	color: var(--ink);
 	font-family: var(--font);
-	font-size: 15px;
-	line-height: 1.45;
+	font-size: 14.5px;
+	line-height: 1.5;
 	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	overflow-x: hidden;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.14);
+	border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.25);
 }
 
 button,
 input,
-select {
+select,
+textarea {
 	font: inherit;
 	color: inherit;
 }
 
 button {
 	cursor: pointer;
+	border: 0;
+	background: none;
+	padding: 0;
 }
 
 a {
 	color: inherit;
-	text-underline-offset: 3px;
+	text-decoration: none;
 }
 
 :focus-visible {
-	outline: 2px solid var(--blue);
+	outline: 2px solid var(--yellow);
 	outline-offset: 2px;
 }
 
-/* Buttons: flat paper, or yellow brick with a hard shadow */
+/* Studio Buttons */
 .btn {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	justify-content: center;
+	gap: 7px;
 	height: 38px;
 	padding: 0 14px;
-	border: 1.5px solid var(--ink);
-	border-radius: var(--radius);
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
 	background: var(--card);
+	color: var(--ink);
 	font-weight: 600;
+	font-size: 0.88rem;
 	white-space: nowrap;
-	transition:
-		transform 0.08s,
-		box-shadow 0.08s;
+	transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+	box-shadow: var(--shadow-sm);
+	user-select: none;
 }
 .btn:hover:not(:disabled) {
-	background: #fff;
+	background: var(--card-hover);
+	border-color: var(--line-focus);
+	color: #ffffff;
+	transform: translateY(-1px);
+	box-shadow: var(--shadow-md);
+}
+.btn:active:not(:disabled) {
+	transform: translateY(0);
+	background: var(--card-active);
 }
 .btn.primary {
-	background: var(--yellow);
-	box-shadow: 3px 3px 0 var(--ink);
+	background: linear-gradient(180deg, #ffe033 0%, var(--yellow) 100%);
+	color: #0b0d14;
+	border: 1px solid rgba(255, 255, 255, 0.25);
+	font-weight: 700;
+	box-shadow: 0 2px 10px rgba(255, 208, 0, 0.32);
+}
+.btn.primary:hover:not(:disabled) {
+	background: linear-gradient(180deg, #ffea66 0%, #ffd61a 100%);
+	box-shadow: 0 4px 18px rgba(255, 208, 0, 0.48);
+	transform: translateY(-1px);
+	color: #000;
 }
 .btn.primary:active:not(:disabled) {
-	transform: translate(2px, 2px);
-	box-shadow: 1px 1px 0 var(--ink);
+	transform: translateY(0);
+	box-shadow: 0 2px 6px rgba(255, 208, 0, 0.25);
 }
 .btn.quiet {
 	border-color: transparent;
-	background: none;
+	background: transparent;
 	color: var(--ink-2);
+	box-shadow: none;
 }
 .btn.quiet:hover:not(:disabled) {
-	background: var(--sunk);
+	background: rgba(255, 255, 255, 0.07);
+	color: var(--ink);
+	transform: none;
 }
 .btn:disabled {
-	opacity: 0.35;
-	cursor: default;
+	opacity: 0.38;
+	cursor: not-allowed;
+	pointer-events: none;
 }
 
 .mono {
@@ -106,19 +177,20 @@ a {
 	font-size: 0.72rem;
 	font-weight: 700;
 	text-transform: uppercase;
-	letter-spacing: 0.08em;
+	letter-spacing: 0.09em;
 	color: var(--muted);
 }
 
 kbd {
 	font-family: var(--mono);
-	font-size: 0.75rem;
-	padding: 1px 5px;
-	border: 1px solid var(--line);
-	border-bottom-width: 2px;
+	font-size: 0.72rem;
+	font-weight: 500;
+	padding: 1px 6px;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-bottom: 2px solid rgba(255, 255, 255, 0.2);
 	border-radius: 4px;
-	background: var(--card);
-	color: var(--ink-2);
+	background: rgba(255, 255, 255, 0.05);
+	color: var(--ink);
 }
 
 .sr-only {

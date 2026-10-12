@@ -67,32 +67,45 @@
 		class="swatch"
 		class:metal={c.finish}
 		style:--c={c.hex}
-		title="{c.name} ({c.code})"
-		aria-label={c.name}
+		title="{c.name} (#{c.code})"
+		aria-label="{c.name} (#{c.code})"
 		aria-pressed={c.code === target.value}
 		onclick={() => target.onchange(c.code)}
-	></button>
+	>
+		<span class="stud" aria-hidden="true"></span>
+	</button>
 {/snippet}
 
 <div class="bar">
 	<div class="head">
 		{#if targets.length > 1}
 			<div class="targets" role="tablist" aria-label={t('colourOf')}>
-				{#each targets as t, i (t.label)}
-					<button type="button" role="tab" aria-selected={t === target} onclick={() => (index = i)}>
-						<span class="dot" style:background={byCode.get(t.value)?.hex}></span>{t.label}
+				{#each targets as tg, i (tg.label)}
+					<button
+						type="button"
+						role="tab"
+						aria-selected={tg === target}
+						onclick={() => (index = i)}
+					>
+						<span class="dot" style:background={byCode.get(tg.value)?.hex}></span>
+						<span>{tg.label}</span>
 					</button>
 				{/each}
 			</div>
 		{:else}
-			<span class="label">{target.label}</span>
+			<div class="target-title">
+				<span class="label">{target.label}</span>
+			</div>
 		{/if}
-		<span class="current">
+
+		<div class="current">
+			<span class="preview-dot" style:background={current?.hex}></span>
 			<span class="name">{current?.name ?? target.value}</span>
 			<span class="mono code">#{target.value}</span>
-		</span>
+		</div>
+
 		<button type="button" class="more" aria-expanded={all} onclick={() => (all = !all)}>
-			{all ? t('fewerColours') : t('allColours', { n: opaque.length })}
+			<span>{all ? t('fewerColours') : t('allColours', { n: opaque.length })}</span>
 			<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5" /></svg>
 		</button>
 	</div>
@@ -100,6 +113,9 @@
 	{#if all}
 		<div class="palette">
 			<label class="find">
+				<svg viewBox="0 0 20 20" aria-hidden="true"
+					><circle cx="8.5" cy="8.5" r="5.5" /><path d="m13 13 4 4" /></svg
+				>
 				<span class="sr-only">{t('findColour')}</span>
 				<input type="search" placeholder={t('findColour')} bind:value={query} />
 			</label>
@@ -121,11 +137,11 @@
 			onwheel={wheel}
 		>
 			{#if figure.length}
-				<span class="group" title={t('onFigure')}>
+				<div class="group on-figure" title={t('onFigure')}>
 					{#each figure as c (c.code)}
 						{@render swatch(c)}
 					{/each}
-				</span>
+				</div>
 				<span class="sep" aria-hidden="true"></span>
 			{/if}
 			{#each common as c (c.code)}
@@ -139,21 +155,25 @@
 	.bar {
 		min-width: 0;
 	}
+
 	.head {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 6px 12px;
-		margin-bottom: 8px;
-		min-height: 26px;
+		gap: 8px 14px;
+		margin-bottom: 10px;
+		min-height: 30px;
 	}
+
 	.targets {
 		display: flex;
-		gap: 2px;
-		padding: 2px;
-		border-radius: var(--radius);
-		background: var(--card);
+		gap: 3px;
+		padding: 3px;
+		border-radius: var(--radius-sm);
+		background: rgba(0, 0, 0, 0.35);
+		border: 1px solid var(--line);
 	}
+
 	.targets button {
 		display: flex;
 		align-items: center;
@@ -164,153 +184,255 @@
 		border-radius: 4px;
 		background: none;
 		color: var(--ink-2);
-		font-size: 0.82rem;
+		font-size: 0.8rem;
 		font-weight: 600;
+		transition: all 0.14s ease;
 	}
-	.targets button[aria-selected='true'] {
-		background: var(--paper);
+
+	.targets button:hover {
 		color: var(--ink);
-		box-shadow: 0 0 0 1.5px var(--ink);
 	}
+
+	.targets button[aria-selected='true'] {
+		background: var(--card-hover);
+		color: #ffffff;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+	}
+
 	.dot {
 		width: 10px;
 		height: 10px;
-		border-radius: 2px;
-		box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2);
+		border-radius: 50%;
+		box-shadow:
+			inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+			0 1px 2px rgba(0, 0, 0, 0.4);
 	}
+
+	.target-title {
+		display: flex;
+		align-items: center;
+	}
+
 	.current {
 		display: flex;
-		align-items: baseline;
-		gap: 6px;
+		align-items: center;
+		gap: 8px;
 		min-width: 0;
+		padding: 2px 8px;
+		border-radius: 6px;
+		background: rgba(255, 255, 255, 0.04);
 	}
+
+	.preview-dot {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+		flex: none;
+	}
+
 	.name {
 		font-weight: 600;
-		font-size: 0.88rem;
+		font-size: 0.86rem;
+		color: var(--ink);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
+
 	.code {
 		color: var(--muted);
+		font-size: 0.78rem;
 	}
+
 	.more {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: 5px;
 		margin-left: auto;
-		height: 26px;
-		padding: 0 8px;
-		border: 1.5px solid var(--line);
-		border-radius: 13px;
-		background: var(--card);
+		height: 28px;
+		padding: 0 10px;
+		border: 1px solid var(--line);
+		border-radius: 14px;
+		background: rgba(255, 255, 255, 0.03);
 		color: var(--ink-2);
-		font-size: 0.78rem;
+		font-size: 0.76rem;
 		font-weight: 600;
 		white-space: nowrap;
+		transition: all 0.14s ease;
 	}
+
 	.more:hover {
-		border-color: var(--ink-2);
+		border-color: var(--line-focus);
 		color: var(--ink);
+		background: rgba(255, 255, 255, 0.07);
 	}
+
 	.more svg {
 		width: 13px;
 		height: 13px;
 		fill: none;
 		stroke: currentColor;
-		stroke-width: 2;
+		stroke-width: 2.2;
 		stroke-linecap: round;
 		stroke-linejoin: round;
-		transition: rotate 0.15s;
+		transition: transform 0.15s ease;
 	}
+
 	.more[aria-expanded='true'] svg {
-		rotate: 180deg;
+		transform: rotate(180deg);
 	}
+
 	.list {
 		display: flex;
-		gap: 4px;
-	}
-	/* Folded: one line, scrolled sideways, edges fading out */
-	.strip {
+		gap: 6px;
 		align-items: center;
+	}
+
+	.strip {
 		overflow-x: auto;
 		scrollbar-width: none;
-		padding: 4px;
-		margin: -4px;
-		mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+		padding: 4px 6px;
+		margin: -4px -6px;
+		mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
 	}
+
 	.strip::-webkit-scrollbar {
 		display: none;
 	}
-	.group {
+
+	.group.on-figure {
 		display: flex;
-		gap: 4px;
+		gap: 5px;
+		padding: 3px 6px;
+		border-radius: 8px;
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px dashed rgba(255, 255, 255, 0.14);
 	}
+
 	.sep {
 		flex: none;
-		width: 1.5px;
-		height: 20px;
+		width: 1px;
+		height: 24px;
 		margin: 0 4px;
-		background: var(--line);
+		background: rgba(255, 255, 255, 0.1);
 	}
+
 	.palette {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 10px;
+		padding: 6px 0;
 	}
+
+	.find {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.find svg {
+		position: absolute;
+		left: 10px;
+		width: 15px;
+		height: 15px;
+		fill: none;
+		stroke: var(--muted);
+		stroke-width: 2;
+		pointer-events: none;
+	}
+
 	.find input {
 		width: 100%;
-		height: 32px;
-		padding: 0 10px;
-		background: var(--card);
-		border: 1.5px solid var(--line);
-		border-radius: var(--radius);
-		font-size: 0.86rem;
+		height: 34px;
+		padding: 0 12px 0 32px;
+		background: rgba(0, 0, 0, 0.35);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sm);
+		font-size: 0.85rem;
+		color: var(--ink);
+		transition: border-color 0.14s;
 	}
+
 	.find input:focus {
-		border-color: var(--ink);
+		border-color: var(--yellow);
 		outline: none;
 	}
+
 	.wrap {
 		flex-wrap: wrap;
-		max-height: 132px;
+		max-height: 150px;
 		overflow-y: auto;
 		padding: 4px;
 		margin: -4px;
+		gap: 6px;
 	}
+
 	.none {
-		margin: 4px 0;
+		margin: 8px 0;
 		color: var(--muted);
 		font-size: 0.85rem;
 	}
+
 	.swatch {
+		position: relative;
 		flex: none;
-		width: 26px;
-		height: 26px;
+		width: 28px;
+		height: 28px;
 		padding: 0;
 		border: 0;
-		border-radius: 4px;
+		border-radius: 7px;
 		background: var(--c);
 		box-shadow:
-			inset 0 0 0 1px rgb(0 0 0 / 0.18),
-			inset 0 -3px 0 rgb(0 0 0 / 0.12);
-		transition: transform 0.08s;
+			inset 0 1px 1px rgba(255, 255, 255, 0.35),
+			inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+			0 1px 3px rgba(0, 0, 0, 0.4);
+		transition:
+			transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+			box-shadow 0.12s;
+		cursor: pointer;
+		display: grid;
+		place-items: center;
 	}
+
+	/* LEGO Stud bevel on the swatch */
+	.stud {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: var(--c);
+		box-shadow:
+			inset 0 1px 1px rgba(255, 255, 255, 0.35),
+			0 1px 2px rgba(0, 0, 0, 0.3);
+		opacity: 0.6;
+		pointer-events: none;
+	}
+
 	.swatch.metal {
-		background: linear-gradient(135deg, #fff9 0 20%, transparent 55%), var(--c);
+		background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, transparent 60%), var(--c);
 	}
+
 	.swatch:hover {
-		transform: translateY(-2px);
+		transform: translateY(-2px) scale(1.08);
+		box-shadow:
+			inset 0 1px 1px rgba(255, 255, 255, 0.45),
+			0 4px 10px rgba(0, 0, 0, 0.5);
+		z-index: 2;
 	}
+
 	.swatch[aria-pressed='true'] {
 		box-shadow:
 			0 0 0 2px var(--card),
-			0 0 0 3.5px var(--ink);
+			0 0 0 4px var(--yellow),
+			0 0 14px var(--yellow-glow);
+		transform: translateY(-1px) scale(1.06);
+		z-index: 3;
 	}
+
 	@media (pointer: coarse) {
 		.swatch {
-			width: 32px;
-			height: 32px;
+			width: 34px;
+			height: 34px;
 		}
 	}
 </style>
