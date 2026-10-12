@@ -1132,7 +1132,6 @@
 		border-radius: var(--radius-lg);
 		container-type: inline-size;
 		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-		overflow: hidden;
 	}
 
 	.modes {
@@ -1586,6 +1585,7 @@
 			grid-column: 2;
 			grid-row: 1 / 3;
 			min-height: 0;
+			overflow: hidden;
 		}
 		.body {
 			flex: 1;
@@ -1699,6 +1699,7 @@
 			background: none;
 			border-radius: 0;
 			box-shadow: none;
+			overflow: visible;
 		}
 		.modes {
 			position: sticky;

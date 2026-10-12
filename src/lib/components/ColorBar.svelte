@@ -67,8 +67,8 @@
 		class="swatch"
 		class:metal={c.finish}
 		style:--c={c.hex}
-		title="{c.name} (#{c.code})"
-		aria-label="{c.name} (#{c.code})"
+		title="{c.name} ({c.code})"
+		aria-label="{c.name} ({c.code})"
 		aria-pressed={c.code === target.value}
 		onclick={() => target.onchange(c.code)}
 	>
