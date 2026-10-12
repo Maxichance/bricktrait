@@ -571,81 +571,93 @@
 
 			<div class="body" class:parts={mode === 'parts'} role="tabpanel">
 				{#if mode === 'parts'}
-					<div class="slots">
-						{#each SLOTS as s (s.id)}
-							{@const f = portrait.figure[s.id]}
-							<Slot
-								label={t(s.id)}
-								cat={catOf(s.id)}
-								id={f.id}
-								name={shortName(find(f.id)?.name ?? f.id ?? '')}
-								fullName={find(f.id)?.name ?? ''}
-								color={colorOf(f.color)}
-								active={active === s.id}
-								shortcut={s.key}
-								onselect={() => (active = s.id)}
-								onremove={() => remove(s.id)}
-							/>
-						{/each}
-					</div>
-
-					{#if failed}
-						<div class="state" role="alert">
-							<p class="error">{t('loadFailed', { error: failed })}</p>
-							<button type="button" class="btn" onclick={load}>{t('retry')}</button>
-						</div>
-					{:else if !ready}
-						<div class="state">
-							<p class="muted">{t('loading')}</p>
-							<div
-								class="bar"
-								role="progressbar"
-								aria-label={t('loading')}
-								aria-valuemin="0"
-								aria-valuemax="100"
-								aria-valuenow={Math.round(progress * 100)}
-							>
-								<span style:width="{progress * 100}%"></span>
-							</div>
-						</div>
-					{:else}
-						{@const f = portrait.figure[active]}
-						{@const part = find(f.id)}
-						{#key active}
-							<div class="current">
-								<span class="badge label">{t(active)}</span>
-								{#if f.id}
-									<strong title={part?.name}>{shortName(part?.name ?? f.id)}</strong>
-									<span class="mono id">{f.id}</span>
-								{:else}
-									<strong class="none">{t('empty')}</strong>
-								{/if}
-								{#if active === 'legs'}
-									<span class="muted hint">{t('legsHint')}</span>
-								{/if}
-							</div>
-							<div class="colors">
-								<ColorBar {targets} {colors} used={usedColours} />
-								{#if active === 'handR' || active === 'handL'}
-									{@const hand = portrait.figure[active]}
-									<label class="range spin">
-										<span class="name">{t('spin')}</span>
-										<input type="range" min="-180" max="180" step="5" bind:value={hand.spin} />
-										<span class="mono val">{hand.spin}°</span>
-									</label>
-								{/if}
-							</div>
-							<div class="catalogue">
-								<PartPicker
-									parts={lists[active]}
-									cat={catOf(active)}
-									selected={f.id}
-									color={f.color}
-									onpick={(id) => pick(active, id)}
+					<div class="parts-layout">
+						<div class="slots" role="group" aria-label={t('parts')}>
+							{#each SLOTS as s (s.id)}
+								{@const f = portrait.figure[s.id]}
+								<Slot
+									label={t(s.id)}
+									cat={catOf(s.id)}
+									id={f.id}
+									name={shortName(find(f.id)?.name ?? f.id ?? '')}
+									fullName={find(f.id)?.name ?? ''}
+									color={colorOf(f.color)}
+									active={active === s.id}
+									shortcut={s.key}
+									onselect={() => (active = s.id)}
+									onremove={() => remove(s.id)}
 								/>
-							</div>
-						{/key}
-					{/if}
+							{/each}
+						</div>
+
+						<div class="parts-workspace">
+							{#if failed}
+								<div class="state" role="alert">
+									<p class="error">{t('loadFailed', { error: failed })}</p>
+									<button type="button" class="btn" onclick={load}>{t('retry')}</button>
+								</div>
+							{:else if !ready}
+								<div class="state">
+									<p class="muted">{t('loading')}</p>
+									<div
+										class="bar"
+										role="progressbar"
+										aria-label={t('loading')}
+										aria-valuemin="0"
+										aria-valuemax="100"
+										aria-valuenow={Math.round(progress * 100)}
+									>
+										<span style:width="{progress * 100}%"></span>
+									</div>
+								</div>
+							{:else}
+								{@const f = portrait.figure[active]}
+								{@const part = find(f.id)}
+								{#key active}
+									<div class="inspector">
+										<div class="current">
+											<span class="badge label">{t(active)}</span>
+											{#if f.id}
+												<strong title={part?.name}>{shortName(part?.name ?? f.id)}</strong>
+												<span class="mono id">{f.id}</span>
+											{:else}
+												<strong class="none">{t('empty')}</strong>
+											{/if}
+											{#if active === 'legs'}
+												<span class="muted hint">{t('legsHint')}</span>
+											{/if}
+										</div>
+										<div class="colors">
+											<ColorBar {targets} {colors} used={usedColours} />
+											{#if active === 'handR' || active === 'handL'}
+												{@const hand = portrait.figure[active]}
+												<label class="range spin">
+													<span class="name">{t('spin')}</span>
+													<input
+														type="range"
+														min="-180"
+														max="180"
+														step="5"
+														bind:value={hand.spin}
+													/>
+													<span class="mono val">{hand.spin}°</span>
+												</label>
+											{/if}
+										</div>
+									</div>
+									<div class="catalogue">
+										<PartPicker
+											parts={lists[active]}
+											cat={catOf(active)}
+											selected={f.id}
+											color={f.color}
+											onpick={(id) => pick(active, id)}
+										/>
+									</div>
+								{/key}
+							{/if}
+						</div>
+					</div>
 				{:else if mode === 'pose'}
 					<div class="presets" role="group" aria-label={t('pose')}>
 						{#each PRESETS as p (p.label)}
@@ -1178,10 +1190,45 @@
 	}
 
 	/* Parts: slots strip, what is selected, colours, then the catalogue */
+	.parts-layout {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		min-height: 0;
+		min-width: 0;
+		max-width: 100%;
+		overflow: hidden;
+		flex: 1;
+	}
+
+	.parts-workspace {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		min-width: 0;
+		max-width: 100%;
+		min-height: 0;
+		overflow: hidden;
+		flex: 1;
+	}
+
 	.slots {
 		display: grid;
 		grid-template-columns: repeat(8, minmax(0, 1fr));
 		gap: 8px;
+	}
+
+	.inspector {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px 14px;
+		padding: 8px 12px;
+		border-radius: var(--radius-sm);
+		background: rgba(0, 0, 0, 0.25);
+		border: 1px solid var(--line);
+		min-height: 40px;
 	}
 
 	.current {
@@ -1189,10 +1236,6 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 6px 10px;
-		padding: 8px 12px;
-		border-radius: 8px;
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(255, 255, 255, 0.05);
 	}
 	.badge {
 		padding: 2px 8px;
@@ -1200,9 +1243,10 @@
 		background: rgba(255, 208, 0, 0.12);
 		color: var(--yellow);
 		font-size: 0.68rem;
+		font-weight: 700;
 	}
 	.current strong {
-		font-size: 0.98rem;
+		font-size: 0.94rem;
 		letter-spacing: -0.01em;
 		color: #ffffff;
 	}
@@ -1212,7 +1256,7 @@
 	}
 	.current .id {
 		color: var(--muted);
-		font-size: 0.76rem;
+		font-size: 0.74rem;
 	}
 	.hint {
 		flex-basis: 100%;
@@ -1221,12 +1265,9 @@
 
 	.colors {
 		display: flex;
-		flex-direction: column;
-		gap: 12px;
-		padding: 12px 14px;
-		border-radius: var(--radius-md);
-		background: rgba(0, 0, 0, 0.25);
-		border: 1px solid var(--line);
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
 	}
 
 	.catalogue {
@@ -1593,7 +1634,113 @@
 		}
 		.body.parts {
 			overflow: hidden;
-			padding-bottom: 0;
+			padding: 12px 14px 14px;
+		}
+		.parts-layout {
+			display: grid;
+			grid-template-columns: 76px minmax(0, 1fr);
+			gap: 12px;
+			height: 100%;
+			min-height: 0;
+			min-width: 0;
+			max-width: 100%;
+			overflow: hidden;
+		}
+		.slots {
+			width: 76px;
+			flex: 0 0 76px;
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			overflow-y: auto;
+			overflow-x: hidden;
+			scrollbar-width: none;
+			padding-right: 2px;
+		}
+		.slots::-webkit-scrollbar {
+			display: none;
+		}
+		.slots :global(.slot) {
+			height: 70px;
+			flex: none;
+		}
+		.slots :global(.slot .pick) {
+			padding: 5px 4px 5px;
+			gap: 2px;
+		}
+		.slots :global(.slot .tile) {
+			max-width: 36px;
+			margin-top: 2px;
+		}
+		.slots :global(.slot .label) {
+			font-size: 0.63rem;
+			color: var(--ink-2);
+			line-height: 1.1;
+		}
+		.parts-workspace {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			min-width: 0;
+			max-width: 100%;
+			width: 100%;
+			height: 100%;
+			min-height: 0;
+			overflow: hidden;
+		}
+		.inspector {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 10px;
+			padding: 6px 12px;
+			border-radius: var(--radius-sm);
+			background: rgba(0, 0, 0, 0.25);
+			border: 1px solid var(--line);
+			min-height: 38px;
+			flex: none;
+			min-width: 0;
+			max-width: 100%;
+			overflow: hidden;
+		}
+		.inspector .current {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			background: none;
+			border: none;
+			padding: 0;
+			flex: none;
+			min-width: 0;
+		}
+		.inspector .current strong {
+			max-width: 160px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.inspector .colors {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			background: none;
+			border: none;
+			padding: 0;
+			margin-left: auto;
+			min-width: 0;
+			max-width: 100%;
+			flex: 1;
+			justify-content: flex-end;
+		}
+		.catalogue {
+			flex: 1;
+			min-height: 0;
+			min-width: 0;
+			max-width: 100%;
+			width: 100%;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
 		}
 	}
 
@@ -1713,6 +1860,20 @@
 		}
 		.body {
 			padding: 14px 0 0;
+		}
+		.parts-layout {
+			display: contents;
+		}
+		.parts-workspace {
+			display: contents;
+		}
+		.inspector {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			padding: 0;
+			background: none;
+			border: none;
 		}
 		main.compact {
 			--sv: min(32vw, 20dvh, 180px);

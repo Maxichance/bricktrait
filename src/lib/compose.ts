@@ -26,7 +26,7 @@ export const defaultStyle: Style = {
 	ringColor: '#1f5ef5',
 	shape: 'round',
 	outline: false,
-	retro: true
+	retro: false
 };
 
 /** Ring colours of the classic character select screens */

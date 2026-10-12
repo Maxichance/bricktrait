@@ -153,22 +153,27 @@
 
 <style>
 	.bar {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 10px;
 		min-width: 0;
+		max-width: 100%;
 	}
 
 	.head {
 		display: flex;
-		flex-wrap: wrap;
 		align-items: center;
-		gap: 8px 14px;
-		margin-bottom: 10px;
+		gap: 8px 12px;
 		min-height: 30px;
+		flex: none;
+		margin: 0;
 	}
 
 	.targets {
 		display: flex;
 		gap: 3px;
-		padding: 3px;
+		padding: 2px;
 		border-radius: var(--radius-sm);
 		background: rgba(0, 0, 0, 0.35);
 		border: 1px solid var(--line);
@@ -179,12 +184,12 @@
 		align-items: center;
 		gap: 6px;
 		height: 26px;
-		padding: 0 10px;
+		padding: 0 9px;
 		border: 0;
 		border-radius: 4px;
 		background: none;
 		color: var(--ink-2);
-		font-size: 0.8rem;
+		font-size: 0.78rem;
 		font-weight: 600;
 		transition: all 0.14s ease;
 	}
@@ -216,7 +221,7 @@
 	.current {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 6px;
 		min-width: 0;
 		padding: 2px 8px;
 		border-radius: 6px;
@@ -233,33 +238,34 @@
 
 	.name {
 		font-weight: 600;
-		font-size: 0.86rem;
+		font-size: 0.82rem;
 		color: var(--ink);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		max-width: 130px;
 	}
 
 	.code {
 		color: var(--muted);
-		font-size: 0.78rem;
+		font-size: 0.75rem;
 	}
 
 	.more {
 		display: flex;
 		align-items: center;
 		gap: 5px;
-		margin-left: auto;
-		height: 28px;
+		height: 26px;
 		padding: 0 10px;
 		border: 1px solid var(--line);
-		border-radius: 14px;
+		border-radius: 13px;
 		background: rgba(255, 255, 255, 0.03);
 		color: var(--ink-2);
-		font-size: 0.76rem;
+		font-size: 0.74rem;
 		font-weight: 600;
 		white-space: nowrap;
 		transition: all 0.14s ease;
+		flex: none;
 	}
 
 	.more:hover {
@@ -269,8 +275,8 @@
 	}
 
 	.more svg {
-		width: 13px;
-		height: 13px;
+		width: 12px;
+		height: 12px;
 		fill: none;
 		stroke: currentColor;
 		stroke-width: 2.2;
@@ -285,16 +291,18 @@
 
 	.list {
 		display: flex;
-		gap: 6px;
+		gap: 5px;
 		align-items: center;
 	}
 
 	.strip {
 		overflow-x: auto;
 		scrollbar-width: none;
-		padding: 4px 6px;
-		margin: -4px -6px;
-		mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+		padding: 2px 4px;
+		flex: 1 1 180px;
+		min-width: 0;
+		max-width: 280px;
+		mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
 	}
 
 	.strip::-webkit-scrollbar {
@@ -303,9 +311,9 @@
 
 	.group.on-figure {
 		display: flex;
-		gap: 5px;
-		padding: 3px 6px;
-		border-radius: 8px;
+		gap: 4px;
+		padding: 2px 5px;
+		border-radius: 6px;
 		background: rgba(255, 255, 255, 0.05);
 		border: 1px dashed rgba(255, 255, 255, 0.14);
 	}
@@ -313,16 +321,26 @@
 	.sep {
 		flex: none;
 		width: 1px;
-		height: 24px;
+		height: 20px;
 		margin: 0 4px;
 		background: rgba(255, 255, 255, 0.1);
 	}
 
 	.palette {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		z-index: 50;
+		width: min(420px, calc(100vw - 32px));
+		background: #181d2c;
+		border: 1px solid var(--line-focus);
+		border-radius: var(--radius-md);
+		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
+		padding: 12px;
+		backdrop-filter: blur(20px);
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
-		padding: 6px 0;
 	}
 
 	.find {
@@ -334,8 +352,8 @@
 	.find svg {
 		position: absolute;
 		left: 10px;
-		width: 15px;
-		height: 15px;
+		width: 14px;
+		height: 14px;
 		fill: none;
 		stroke: var(--muted);
 		stroke-width: 2;
@@ -344,12 +362,12 @@
 
 	.find input {
 		width: 100%;
-		height: 34px;
-		padding: 0 12px 0 32px;
+		height: 32px;
+		padding: 0 12px 0 30px;
 		background: rgba(0, 0, 0, 0.35);
 		border: 1px solid var(--line);
 		border-radius: var(--radius-sm);
-		font-size: 0.85rem;
+		font-size: 0.82rem;
 		color: var(--ink);
 		transition: border-color 0.14s;
 	}
@@ -361,11 +379,11 @@
 
 	.wrap {
 		flex-wrap: wrap;
-		max-height: 150px;
+		max-height: 220px;
 		overflow-y: auto;
 		padding: 4px;
 		margin: -4px;
-		gap: 6px;
+		gap: 5px;
 	}
 
 	.none {
@@ -433,6 +451,22 @@
 		.swatch {
 			width: 34px;
 			height: 34px;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.bar {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 8px;
+		}
+		.head {
+			flex-wrap: wrap;
+		}
+		.palette {
+			position: static;
+			width: 100%;
+			box-shadow: none;
 		}
 	}
 </style>

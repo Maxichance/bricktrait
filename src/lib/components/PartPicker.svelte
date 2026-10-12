@@ -149,7 +149,7 @@
 		</div>
 	</div>
 
-	<div class="row">
+	<div class="sub-filters">
 		{#if themes.length > 1}
 			<label class="select">
 				<span class="sr-only">{t('theme')}</span>
@@ -248,40 +248,63 @@
 	.picker {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
+		gap: 8px;
 		min-height: 0;
 		height: 100%;
+		min-width: 0;
+		max-width: 100%;
+		width: 100%;
+		overflow: hidden;
+		box-sizing: border-box;
 	}
 
 	.scroll {
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
-		margin: 0 -4px;
-		padding: 2px 4px 20px;
+		overflow-x: hidden;
+		margin: 0;
+		padding: 2px 2px 16px;
 		scrollbar-width: thin;
+		min-width: 0;
+		max-width: 100%;
+		width: 100%;
+		box-sizing: border-box;
 	}
 
-	.filters,
-	.row {
+	.filters {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-width: 0;
+		max-width: 100%;
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.sub-filters {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 8px;
+		min-width: 0;
+		max-width: 100%;
+		width: 100%;
+		box-sizing: border-box;
 	}
 
 	.search {
 		position: relative;
-		flex: 1;
-		min-width: 200px;
+		flex: 1 1 auto;
+		min-width: 0;
 	}
 
 	.search svg {
 		position: absolute;
-		left: 12px;
+		left: 10px;
 		top: 50%;
-		width: 15px;
-		height: 15px;
+		width: 14px;
+		height: 14px;
 		transform: translateY(-50%);
 		fill: none;
 		stroke: var(--muted);
@@ -293,12 +316,12 @@
 
 	input[type='search'],
 	select {
-		height: 36px;
+		height: 32px;
 		background: rgba(0, 0, 0, 0.35);
 		border: 1px solid var(--line);
 		border-radius: var(--radius-sm);
 		color: var(--ink);
-		font-size: 0.86rem;
+		font-size: 0.82rem;
 		transition:
 			border-color 0.15s,
 			box-shadow 0.15s;
@@ -464,12 +487,18 @@
 	/* Parts Grid */
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
 		gap: 8px;
+		width: 100%;
+		max-width: 100%;
+		min-width: 0;
+		box-sizing: border-box;
 	}
 
 	.item {
 		position: relative;
+		min-width: 0;
+		box-sizing: border-box;
 	}
 
 	.pick {
@@ -477,10 +506,12 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 4px;
+		gap: 3px;
 		width: 100%;
 		height: 100%;
-		padding: 10px 6px 8px;
+		min-width: 0;
+		box-sizing: border-box;
+		padding: 8px 5px 6px;
 		background: var(--card);
 		border: 1px solid var(--line);
 		border-radius: var(--radius-md);
@@ -491,7 +522,7 @@
 
 	.thumb-wrap {
 		width: 100%;
-		max-width: 68px;
+		max-width: 60px;
 		aspect-ratio: 1;
 		display: grid;
 		place-items: center;
